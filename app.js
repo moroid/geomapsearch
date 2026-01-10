@@ -216,6 +216,12 @@ async function fetchGeologicalMaps(bbox) {
             (r.name?.includes('TileJSON') || r.url?.includes('getTileJson'))
         );
 
+        // Linked Data メタデータリソースを探す（title_j, authors_j等を含む）
+        const ldResource = dataset.resources?.find(r =>
+            r.format === 'JSON' &&
+            r.url?.includes('/ld/resource/')
+        );
+
         if (tileResource || tileJsonResource) {
             // 範囲情報を取得
             let mapBounds = null;
@@ -272,6 +278,7 @@ async function fetchGeologicalMaps(bbox) {
                     author: dataset.author,
                     tileUrl: tileResource?.url,
                     tileJsonUrl: tileJsonResource?.url,
+                    ldUrl: ldResource?.url,
                     bounds: mapBounds,
                     imageUrl: imageResource?.url,
                     pdfUrl: pdfResource?.url
@@ -300,6 +307,7 @@ function boundsIntersect(a, b) {
  */
 function categorizeResults(results) {
     const categories = {
+        '地質図幅': [],
         '火山地質図': [],
         '水理地質図': [],
         '表層地質図': [],
@@ -309,7 +317,6 @@ function categorizeResults(results) {
         '地熱地質図': [],
         '鉱物資源図': [],
         '重力図': [],
-        '地質図幅': [],
         'その他': []
     };
 
@@ -601,6 +608,20 @@ async function addLayer(mapData) {
             }
         }
 
+        // Linked Dataメタデータからtitle_j, authors_jを取得（TileJSONで取得できなかった場合）
+        if (!mapTitleJ && mapData.ldUrl) {
+            try {
+                const ldResponse = await fetch(mapData.ldUrl);
+                if (ldResponse.ok) {
+                    const ldData = await ldResponse.json();
+                    if (ldData.title_j) mapTitleJ = ldData.title_j;
+                    if (ldData.authors_j) mapAuthorsJ = ldData.authors_j;
+                }
+            } catch (e) {
+                console.warn('LDメタデータ取得エラー:', e);
+            }
+        }
+
         if (!tileUrl) {
             console.error('タイルURLが見つかりません');
             return;
@@ -866,45 +887,21 @@ async function showLegend(layerId, mapData) {
         // 地質図の凡例情報を構築
         let legendHtml = '';
 
-        // 説明セクション（凡例より先に表示）
-        // 引用テキストを生成: title_j + authors_j
-        let citationText = '';
-        if (mapData.mapTitleJ) {
-            // マークダウン記法を除去してプレーンテキストに変換
-            citationText = stripMarkdown(mapData.mapTitleJ);
-            if (mapData.mapAuthorsJ) {
-                citationText += `　${stripMarkdown(mapData.mapAuthorsJ)}`;
-            }
-        }
+        // 説明セクション（凡例より先に表示）- title_jとauthors_jのみ表示
+        // TileJSONのtitle_j/authors_jを優先、なければCKANのtitle/authorにフォールバック
+        const titleText = mapData.mapTitleJ ? stripMarkdown(mapData.mapTitleJ) : (mapData.title || '');
+        const authorText = mapData.mapAuthorsJ ? stripMarkdown(mapData.mapAuthorsJ) : (mapData.author || '');
 
-        // TileJSONのtitle_jがある場合
-        if (citationText) {
-            // コピー用にエスケープ処理
+        if (titleText) {
+            const citationText = authorText ? `${titleText}　${authorText}` : titleText;
             const escapedCitation = citationText.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
             legendHtml += `
                 <div class="legend-section">
                     <div class="legend-section-title">説明</div>
                     <div class="legend-citation-line">
                         <p class="legend-citation-text">${escapeHtml(citationText)}</p>
                         <button class="legend-copy-btn" onclick="copyToClipboard(\`${escapedCitation}\`, this)" title="コピー">📋</button>
-                    </div>
-                </div>
-            `;
-        }
-        // フォールバック: CKANのnotesがある場合
-        else if (mapData.notes) {
-            let shortNotes = mapData.notes.length > 300
-                ? mapData.notes.substring(0, 300) + '...'
-                : mapData.notes;
-            shortNotes = stripMarkdown(shortNotes);
-            const escapedNotes = shortNotes.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-
-            legendHtml += `
-                <div class="legend-section">
-                    <div class="legend-section-title">説明</div>
-                    <div class="legend-citation-line">
-                        <p class="legend-citation-text">${escapeHtml(shortNotes)}</p>
-                        <button class="legend-copy-btn" onclick="copyToClipboard(\`${escapedNotes}\`, this)" title="コピー">📋</button>
                     </div>
                 </div>
             `;
