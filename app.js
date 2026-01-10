@@ -615,12 +615,17 @@ async function addLayer(mapData) {
                 const ldResponse = await fetch(mapData.ldUrl);
                 if (ldResponse.ok) {
                     const ldData = await ldResponse.json();
-                    console.log('LD JSON:', ldData);  // デバッグ用
                     if (!mapTitleJ && ldData.title_j) mapTitleJ = ldData.title_j;
                     if (!mapAuthorsJ && ldData.authors_j) mapAuthorsJ = ldData.authors_j;
-                    // GeoTIFF URLを取得
-                    if (ldData.geotiff) geotiffUrl = ldData.geotiff;
-                    if (ldData.download?.geotiff) geotiffUrl = ldData.download.geotiff;
+                    // GeoTIFF URLをdownloadData配列から取得
+                    if (ldData.downloadData) {
+                        const geotiffData = ldData.downloadData.find(d =>
+                            d.title === 'GeoTIFF' || d.data_type?.includes('GeoTiff')
+                        );
+                        if (geotiffData && geotiffData['@id']) {
+                            geotiffUrl = geotiffData['@id'];
+                        }
+                    }
                 }
             } catch (e) {
                 console.warn('LDメタデータ取得エラー:', e);
