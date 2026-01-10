@@ -307,6 +307,7 @@ function boundsIntersect(a, b) {
  */
 function categorizeResults(results) {
     const categories = {
+        '地質図幅': [],
         '火山地質図': [],
         '水理地質図': [],
         '表層地質図': [],
@@ -316,7 +317,6 @@ function categorizeResults(results) {
         '地熱地質図': [],
         '鉱物資源図': [],
         '重力図': [],
-        '地質図幅': [],
         'その他': []
     };
 
