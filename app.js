@@ -1,0 +1,1268 @@
+/**
+ * 産総研 地質図検索ビューア
+ *
+ * 地質調査総合センターが公開している地質図をLeaflet上で検索・表示するアプリケーション
+ */
+
+// グローバル変数
+let map;
+let seamlessLayer = null;
+let activeLayers = new Map(); // layerId -> { layer, data, legendData }
+let searchResults = [];
+let currentLegendLayerId = null;
+let seamlessLegendData = null;
+
+// 画像ビューア状態
+let viewerZoom = 1;
+let viewerPanning = false;
+let viewerStartX = 0;
+let viewerStartY = 0;
+let viewerScrollLeft = 0;
+let viewerScrollTop = 0;
+
+
+// 凡例パネル内画像ズーム状態
+let legendImageZoom = 1;
+let legendImagePanning = false;
+let legendImageStartX = 0;
+let legendImageStartY = 0;
+let legendImagePosX = 0;
+let legendImagePosY = 0;
+let legendImageStartPosX = 0;
+let legendImageStartPosY = 0;
+let currentLegendImage = null;
+let legendImageNaturalWidth = 0;
+let legendImageNaturalHeight = 0;
+
+// 右サイドバーリサイズ状態
+let legendSidebarResizing = false;
+let legendSidebarStartX = 0;
+let legendSidebarStartWidth = 0;
+
+// CKAN API エンドポイント
+const CKAN_API_BASE = 'https://data.gsj.jp/gkan/api/3/action';
+
+// シームレス地質図関連URL
+const SEAMLESS_TILE_URL = 'https://gbank.gsj.jp/seamless/v2/api/1.3.1/tiles/{z}/{y}/{x}.png';
+const SEAMLESS_LEGEND_URL = 'https://gbank.gsj.jp/seamless/v2/api/1.3.1/legend.json';
+
+/**
+ * 初期化
+ */
+function init() {
+    initMap();
+    initEventListeners();
+}
+
+/**
+ * Leaflet地図の初期化
+ */
+function initMap() {
+    // 日本の中心付近で初期化
+    map = L.map('map', {
+        center: [36.0, 138.0],
+        zoom: 6,
+        zoomControl: true,
+        attributionControl: false
+    });
+
+    // 帰属表示を追加（Leafletを除外）
+    L.control.attribution({
+        prefix: false
+    }).addTo(map);
+
+    // ベースマップ（OpenStreetMap）
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18
+    }).addTo(map);
+
+    // 地理院タイル（淡色地図）も追加可能
+    const gsiPale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+        maxZoom: 18
+    });
+
+    // レイヤーコントロール
+    const baseMaps = {
+        'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(map),
+        '地理院タイル（淡色）': gsiPale
+    };
+
+    L.control.layers(baseMaps).addTo(map);
+}
+
+/**
+ * イベントリスナーの設定
+ */
+function initEventListeners() {
+    // 検索ボタン
+    document.getElementById('searchBtn').addEventListener('click', searchGeologicalMaps);
+
+    // シームレス地質図トグル
+    document.getElementById('seamlessToggle').addEventListener('change', toggleSeamlessLayer);
+
+    // シームレス地質図透明度
+    document.getElementById('seamlessOpacity').addEventListener('input', updateSeamlessOpacity);
+
+    // シームレス地質図凡例ボタン
+    document.getElementById('seamlessLegendBtn').addEventListener('click', showSeamlessLegend);
+
+    // 凡例サイドバー閉じるボタン
+    document.getElementById('closeLegendBtn').addEventListener('click', closeLegendSidebar);
+
+    // 凡例サイドバー開くボタン
+    document.getElementById('legendSidebarToggle').addEventListener('click', openLegendSidebar);
+
+    // 凡例サイドバーリサイズ
+    initLegendSidebarResize();
+
+    // 凡例パネル内画像ズームコントロール
+    initLegendZoomControls();
+
+    // 画像ビューアのイベント
+    initImageViewer();
+}
+
+/**
+ * 表示範囲内の地質図を検索
+ */
+async function searchGeologicalMaps() {
+    const searchBtn = document.getElementById('searchBtn');
+    const statusText = document.getElementById('searchStatus');
+    const resultContainer = document.getElementById('searchResults');
+    const resultCount = document.getElementById('resultCount');
+
+    // ボタンを無効化
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<span class="loading"></span> 検索中...';
+    statusText.textContent = '';
+    statusText.className = 'status-text';
+
+    try {
+        // 現在の表示範囲を取得
+        const bounds = map.getBounds();
+        const bbox = {
+            west: bounds.getWest(),
+            south: bounds.getSouth(),
+            east: bounds.getEast(),
+            north: bounds.getNorth()
+        };
+
+        // CKAN APIで地質図を検索
+        const results = await fetchGeologicalMaps(bbox);
+        searchResults = results;
+
+        // 結果を表示
+        if (results.length === 0) {
+            resultContainer.innerHTML = '<p class="placeholder-text">この範囲には地質図が見つかりませんでした。</p>';
+            resultCount.textContent = '(0件)';
+            statusText.textContent = '地質図が見つかりませんでした';
+            statusText.className = 'status-text';
+        } else {
+            renderSearchResults(results);
+            resultCount.textContent = `(${results.length}件)`;
+            statusText.textContent = `${results.length}件の地質図が見つかりました`;
+            statusText.className = 'status-text success';
+        }
+    } catch (error) {
+        console.error('検索エラー:', error);
+        resultContainer.innerHTML = '<p class="placeholder-text">検索中にエラーが発生しました。</p>';
+        statusText.textContent = 'エラー: ' + error.message;
+        statusText.className = 'status-text error';
+    } finally {
+        searchBtn.disabled = false;
+        searchBtn.innerHTML = '<span class="btn-icon">🔍</span> 表示範囲で検索';
+    }
+}
+
+/**
+ * CKAN APIから地質図データを取得
+ */
+async function fetchGeologicalMaps(bbox) {
+    // 空間検索用のクエリを構築
+    // CKANは空間検索をサポートしていないため、全データを取得してクライアント側でフィルタリング
+    const url = `${CKAN_API_BASE}/package_search?q=地質図&rows=500`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error('APIリクエストに失敗しました');
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+        throw new Error('APIがエラーを返しました');
+    }
+
+    // タイル配信がある地質図のみフィルタリング
+    const mapsWithTiles = [];
+
+    for (const dataset of data.result.results) {
+        // タイルリソースを探す
+        const tileResource = dataset.resources?.find(r =>
+            r.format === 'XYZ' ||
+            r.name?.includes('タイル') ||
+            r.url?.includes('maptile/xyz')
+        );
+
+        const tileJsonResource = dataset.resources?.find(r =>
+            r.format === 'JSON' &&
+            (r.name?.includes('TileJSON') || r.url?.includes('getTileJson'))
+        );
+
+        if (tileResource || tileJsonResource) {
+            // 範囲情報を取得
+            let mapBounds = null;
+
+            // spatialフィールドから範囲を取得
+            if (dataset.spatial) {
+                try {
+                    const spatial = typeof dataset.spatial === 'string'
+                        ? JSON.parse(dataset.spatial)
+                        : dataset.spatial;
+
+                    if (spatial.type === 'Polygon' && spatial.coordinates) {
+                        const coords = spatial.coordinates[0];
+                        const lons = coords.map(c => c[0]);
+                        const lats = coords.map(c => c[1]);
+                        mapBounds = {
+                            west: Math.min(...lons),
+                            east: Math.max(...lons),
+                            south: Math.min(...lats),
+                            north: Math.max(...lats)
+                        };
+                    }
+                } catch (e) {
+                    console.warn('spatial解析エラー:', e);
+                }
+            }
+
+            // リソースのdescriptionからBBOXを取得
+            if (!mapBounds && tileResource?.description) {
+                const bboxMatch = tileResource.description.match(/BBOX:\s*([\d.]+),([\d.]+),([\d.]+),([\d.]+)/);
+                if (bboxMatch) {
+                    mapBounds = {
+                        west: parseFloat(bboxMatch[1]),
+                        south: parseFloat(bboxMatch[2]),
+                        east: parseFloat(bboxMatch[3]),
+                        north: parseFloat(bboxMatch[4])
+                    };
+                }
+            }
+
+            // 表示範囲と交差するかチェック
+            if (mapBounds && boundsIntersect(bbox, mapBounds)) {
+                // 凡例関連リソースを探す
+                const imageResource = dataset.resources?.find(r =>
+                    r.format === 'JPEG' || r.format === 'JPG' || r.format === 'PNG'
+                );
+                const pdfResource = dataset.resources?.find(r => r.format === 'PDF');
+
+                mapsWithTiles.push({
+                    id: dataset.id,
+                    name: dataset.name,
+                    title: dataset.title,
+                    notes: dataset.notes,
+                    tileUrl: tileResource?.url,
+                    tileJsonUrl: tileJsonResource?.url,
+                    bounds: mapBounds,
+                    imageUrl: imageResource?.url,
+                    pdfUrl: pdfResource?.url
+                });
+            }
+        }
+    }
+
+    return mapsWithTiles;
+}
+
+/**
+ * 2つの矩形範囲が交差するかチェック
+ */
+function boundsIntersect(a, b) {
+    return !(
+        a.east < b.west ||
+        a.west > b.east ||
+        a.north < b.south ||
+        a.south > b.north
+    );
+}
+
+/**
+ * 検索結果を表示
+ */
+function renderSearchResults(results) {
+    const container = document.getElementById('searchResults');
+    container.innerHTML = '';
+
+    results.forEach((result, index) => {
+        const item = document.createElement('div');
+        item.className = 'result-item';
+        if (activeLayers.has(result.id)) {
+            item.classList.add('selected');
+        }
+
+        // タイトルを短縮
+        const shortTitle = result.title.length > 50
+            ? result.title.substring(0, 50) + '...'
+            : result.title;
+
+        item.innerHTML = `
+            <div class="result-item-title">${shortTitle}</div>
+            <div class="result-item-info">
+                範囲: ${result.bounds.south.toFixed(2)}°N - ${result.bounds.north.toFixed(2)}°N,
+                ${result.bounds.west.toFixed(2)}°E - ${result.bounds.east.toFixed(2)}°E
+            </div>
+        `;
+
+        item.addEventListener('click', () => toggleMapLayer(result));
+        container.appendChild(item);
+    });
+}
+
+/**
+ * 地質図レイヤーの表示/非表示を切り替え
+ */
+async function toggleMapLayer(mapData) {
+    if (activeLayers.has(mapData.id)) {
+        // レイヤーを削除
+        removeLayer(mapData.id);
+    } else {
+        // レイヤーを追加
+        await addLayer(mapData);
+    }
+
+    // 検索結果の選択状態を更新
+    updateSearchResultsSelection();
+}
+
+/**
+ * レイヤーを追加
+ */
+async function addLayer(mapData) {
+    try {
+        let tileUrl = mapData.tileUrl;
+        let bounds = mapData.bounds;
+        let minZoom = 2;
+        let maxZoom = 18;
+        let legendUrl = null;
+        let mapName = null;
+        let mapDescription = null;
+
+        // TileJSONから詳細情報を取得
+        if (mapData.tileJsonUrl) {
+            try {
+                const tileJsonResponse = await fetch(mapData.tileJsonUrl);
+                if (tileJsonResponse.ok) {
+                    const tileJson = await tileJsonResponse.json();
+
+                    // webp形式のURLを優先
+                    if (tileJson.tiles) {
+                        const webpUrl = tileJson.tiles.find(t => t.includes('.webp'));
+                        const pngUrl = tileJson.tiles.find(t => t.includes('.png'));
+                        tileUrl = webpUrl || pngUrl || tileJson.tiles[0];
+                    }
+
+                    if (tileJson.bounds) {
+                        bounds = {
+                            west: tileJson.bounds[0],
+                            south: tileJson.bounds[1],
+                            east: tileJson.bounds[2],
+                            north: tileJson.bounds[3]
+                        };
+                    }
+
+                    if (tileJson.minzoom !== undefined) minZoom = tileJson.minzoom;
+                    if (tileJson.maxzoom !== undefined) maxZoom = tileJson.maxzoom;
+
+                    // 凡例URLを取得
+                    if (tileJson.legend) {
+                        legendUrl = tileJson.legend;
+                    }
+
+                    // 地図名と説明を取得
+                    if (tileJson.name) mapName = tileJson.name;
+                    if (tileJson.description) mapDescription = tileJson.description;
+                }
+            } catch (e) {
+                console.warn('TileJSON取得エラー:', e);
+            }
+        }
+
+        if (!tileUrl) {
+            console.error('タイルURLが見つかりません');
+            return;
+        }
+
+        // Leafletタイルレイヤーを作成
+        // maxNativeZoomを設定し、それ以上のズームではバイリニア補間で拡大表示
+        const layer = L.tileLayer(tileUrl, {
+            minZoom: minZoom,
+            maxZoom: 18,  // 表示可能な最大ズーム
+            maxNativeZoom: maxZoom,  // タイルが存在する最大ズーム
+            opacity: 0.7,
+            bounds: bounds ? L.latLngBounds(
+                [bounds.south, bounds.west],
+                [bounds.north, bounds.east]
+            ) : undefined,
+            attribution: '<a href="https://gbank.gsj.jp/geonavi/">産総研 地質図Navi</a>'
+        });
+
+        layer.addTo(map);
+
+        // アクティブレイヤーに追加（凡例URL含む）
+        activeLayers.set(mapData.id, {
+            layer: layer,
+            data: {
+                ...mapData,
+                bounds,
+                minZoom,
+                maxZoom,
+                legendUrl,
+                mapName,
+                mapDescription
+            }
+        });
+
+        updateActiveLayersList();
+
+    } catch (error) {
+        console.error('レイヤー追加エラー:', error);
+    }
+}
+
+/**
+ * レイヤーを削除
+ */
+function removeLayer(layerId) {
+    const layerInfo = activeLayers.get(layerId);
+    if (layerInfo) {
+        map.removeLayer(layerInfo.layer);
+        activeLayers.delete(layerId);
+        updateActiveLayersList();
+    }
+}
+
+/**
+ * 表示中レイヤーリストを更新
+ */
+function updateActiveLayersList() {
+    const container = document.getElementById('activeLayers');
+    const countSpan = document.getElementById('layerCount');
+
+    countSpan.textContent = `(${activeLayers.size}枚)`;
+
+    if (activeLayers.size === 0) {
+        container.innerHTML = '<p class="placeholder-text">地質図が選択されていません。</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+
+    activeLayers.forEach((layerInfo, layerId) => {
+        const item = document.createElement('div');
+        item.className = 'layer-item';
+
+        const shortTitle = layerInfo.data.title.length > 40
+            ? layerInfo.data.title.substring(0, 40) + '...'
+            : layerInfo.data.title;
+
+        item.innerHTML = `
+            <div class="layer-item-header">
+                <span class="layer-item-title">${shortTitle}</span>
+                <div class="layer-item-controls">
+                    <button class="layer-btn legend-btn" title="凡例を表示">📋</button>
+                    <button class="layer-btn zoom-btn" title="この地質図にズーム">📍</button>
+                    <button class="layer-btn remove-btn" title="削除">✕</button>
+                </div>
+            </div>
+            <div class="layer-item-opacity">
+                <span>透明度:</span>
+                <input type="range" min="0" max="100" value="70" />
+                <span class="opacity-value">70%</span>
+            </div>
+        `;
+
+        // 凡例ボタン
+        item.querySelector('.legend-btn').addEventListener('click', () => {
+            showLegend(layerId, layerInfo.data);
+        });
+
+        // ズームボタン
+        item.querySelector('.zoom-btn').addEventListener('click', () => {
+            const bounds = layerInfo.data.bounds;
+            if (bounds) {
+                map.fitBounds([
+                    [bounds.south, bounds.west],
+                    [bounds.north, bounds.east]
+                ]);
+            }
+        });
+
+        // 削除ボタン
+        item.querySelector('.remove-btn').addEventListener('click', () => {
+            removeLayer(layerId);
+            updateSearchResultsSelection();
+        });
+
+        // 透明度スライダー
+        const slider = item.querySelector('input[type="range"]');
+        const valueSpan = item.querySelector('.opacity-value');
+        slider.value = layerInfo.layer.options.opacity * 100;
+        valueSpan.textContent = `${Math.round(slider.value)}%`;
+
+        slider.addEventListener('input', (e) => {
+            const opacity = e.target.value / 100;
+            layerInfo.layer.setOpacity(opacity);
+            valueSpan.textContent = `${e.target.value}%`;
+        });
+
+        container.appendChild(item);
+    });
+}
+
+/**
+ * 検索結果の選択状態を更新
+ */
+function updateSearchResultsSelection() {
+    const items = document.querySelectorAll('.result-item');
+    items.forEach((item, index) => {
+        if (searchResults[index] && activeLayers.has(searchResults[index].id)) {
+            item.classList.add('selected');
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+}
+
+/**
+ * シームレス地質図の表示/非表示を切り替え
+ */
+function toggleSeamlessLayer(e) {
+    const seamlessControls = document.getElementById('seamlessControls');
+
+    if (e.target.checked) {
+        // シームレス地質図を追加
+        // maxNativeZoomを設定し、それ以上のズームではバイリニア補間で拡大表示
+        seamlessLayer = L.tileLayer(SEAMLESS_TILE_URL, {
+            minZoom: 0,
+            maxZoom: 18,  // 表示可能な最大ズーム
+            maxNativeZoom: 13,  // タイルが存在する最大ズーム
+            opacity: 0.7,
+            attribution: '<a href="https://gbank.gsj.jp/seamless/">20万分の1日本シームレス地質図</a>'
+        });
+        seamlessLayer.addTo(map);
+        seamlessControls.style.display = 'block';
+    } else {
+        // シームレス地質図を削除
+        if (seamlessLayer) {
+            map.removeLayer(seamlessLayer);
+            seamlessLayer = null;
+        }
+        seamlessControls.style.display = 'none';
+        // 凡例サイドバーも閉じる
+        if (currentLegendLayerId === 'seamless') {
+            closeLegendSidebar();
+        }
+    }
+}
+
+/**
+ * シームレス地質図の透明度を更新
+ */
+function updateSeamlessOpacity(e) {
+    const opacity = e.target.value / 100;
+    document.getElementById('seamlessOpacityValue').textContent = e.target.value;
+
+    if (seamlessLayer) {
+        seamlessLayer.setOpacity(opacity);
+    }
+}
+
+/**
+ * 凡例を表示
+ */
+async function showLegend(layerId, mapData) {
+    const sidebar = document.getElementById('legendSidebar');
+    const content = document.getElementById('legendContent');
+    const titleEl = document.getElementById('legendTitle');
+    const toggleBtn = document.getElementById('legendSidebarToggle');
+
+    // サイドバーを表示、トグルボタンを非表示
+    sidebar.classList.remove('hidden');
+    toggleBtn.classList.add('hidden');
+    currentLegendLayerId = layerId;
+
+    // タイトルを設定（TileJSONのnameを優先）
+    const displayTitle = mapData.mapName || mapData.title;
+    const shortTitle = displayTitle.length > 25
+        ? displayTitle.substring(0, 25) + '...'
+        : displayTitle;
+    titleEl.textContent = shortTitle;
+
+    // ローディング表示
+    content.innerHTML = `
+        <div class="legend-loading">
+            <span class="loading"></span>
+            <span>凡例を読み込み中...</span>
+        </div>
+    `;
+
+    try {
+        // 地質図の凡例情報を構築
+        let legendHtml = '';
+
+        // TileJSONの凡例画像がある場合（優先）
+        if (mapData.legendUrl) {
+            legendHtml += `
+                <div class="legend-section">
+                    <div class="legend-section-title">凡例</div>
+                    <div class="legend-image-container">
+                        <img src="${mapData.legendUrl}" alt="凡例" class="legend-image clickable"
+                             data-title="${displayTitle}"
+                             onclick="openLegendImageZoom(this)"
+                             onerror="this.parentElement.innerHTML='<p class=\\'placeholder-text\\'>凡例画像を読み込めませんでした</p>'" />
+                        <p class="legend-image-hint">クリックで拡大表示</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // TileJSONのdescriptionがある場合
+        if (mapData.mapDescription) {
+            legendHtml += `
+                <div class="legend-section">
+                    <div class="legend-section-title">説明</div>
+                    <p style="font-size: 0.8rem; color: #333; line-height: 1.5;">${mapData.mapDescription}</p>
+                </div>
+            `;
+        }
+        // CKANのnotesがある場合（TileJSONのdescriptionがなければ）
+        else if (mapData.notes) {
+            const shortNotes = mapData.notes.length > 300
+                ? mapData.notes.substring(0, 300) + '...'
+                : mapData.notes;
+            legendHtml += `
+                <div class="legend-section">
+                    <div class="legend-section-title">説明</div>
+                    <p style="font-size: 0.8rem; color: #333; line-height: 1.5;">${shortNotes}</p>
+                </div>
+            `;
+        }
+
+        // 出版物画像がある場合（凡例URLがなければ表示）
+        if (!mapData.legendUrl && mapData.imageUrl) {
+            legendHtml += `
+                <div class="legend-section">
+                    <div class="legend-section-title">地質図画像</div>
+                    <div class="legend-image-container">
+                        <img src="${mapData.imageUrl}" alt="地質図" class="legend-image clickable"
+                             data-title="${displayTitle}"
+                             onclick="openLegendImageZoom(this)"
+                             onerror="this.parentElement.innerHTML='<p class=\\'placeholder-text\\'>画像を読み込めませんでした</p>'" />
+                        <p class="legend-image-hint">クリックで拡大表示</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // PDF説明書へのリンク
+        if (mapData.pdfUrl) {
+            legendHtml += `
+                <a href="${mapData.pdfUrl}" target="_blank" class="legend-link">
+                    📄 説明書（PDF）を開く
+                </a>
+            `;
+        }
+
+        // CKANページへのリンク
+        legendHtml += `
+            <a href="https://data.gsj.jp/gkan/dataset/${mapData.name}" target="_blank" class="legend-link">
+                🔗 詳細ページを開く（CKAN）
+            </a>
+        `;
+
+        // 凡例がない場合のメッセージ
+        if (!mapData.legendUrl && !mapData.imageUrl && !mapData.notes && !mapData.mapDescription && !mapData.pdfUrl) {
+            legendHtml = `
+                <div class="legend-section">
+                    <p class="placeholder-text">この地質図の凡例データは利用できません。</p>
+                </div>
+                <a href="https://data.gsj.jp/gkan/dataset/${mapData.name}" target="_blank" class="legend-link">
+                    🔗 詳細ページを開く（CKAN）
+                </a>
+            `;
+        }
+
+        content.innerHTML = legendHtml;
+
+    } catch (error) {
+        console.error('凡例読み込みエラー:', error);
+        content.innerHTML = `
+            <div class="legend-error">
+                凡例の読み込みに失敗しました。
+            </div>
+            <a href="https://data.gsj.jp/gkan/dataset/${mapData.name}" target="_blank" class="legend-link">
+                🔗 詳細ページを開く（CKAN）
+            </a>
+        `;
+    }
+}
+
+/**
+ * シームレス地質図の凡例を表示
+ */
+async function showSeamlessLegend() {
+    const sidebar = document.getElementById('legendSidebar');
+    const content = document.getElementById('legendContent');
+    const titleEl = document.getElementById('legendTitle');
+    const toggleBtn = document.getElementById('legendSidebarToggle');
+
+    // サイドバーを表示、トグルボタンを非表示
+    sidebar.classList.remove('hidden');
+    toggleBtn.classList.add('hidden');
+    currentLegendLayerId = 'seamless';
+
+    titleEl.textContent = 'シームレス地質図';
+
+    // ローディング表示
+    content.innerHTML = `
+        <div class="legend-loading">
+            <span class="loading"></span>
+            <span>凡例を読み込み中...</span>
+        </div>
+    `;
+
+    try {
+        // キャッシュがあれば使用
+        if (!seamlessLegendData) {
+            const response = await fetch(SEAMLESS_LEGEND_URL);
+            if (!response.ok) throw new Error('凡例データの取得に失敗');
+            seamlessLegendData = await response.json();
+        }
+
+        // 凡例をグループ別に整理
+        const groups = {};
+        seamlessLegendData.forEach(item => {
+            const group = item.group_ja || '不明';
+            if (!groups[group]) {
+                groups[group] = [];
+            }
+            groups[group].push(item);
+        });
+
+        // HTMLを構築
+        let legendHtml = `
+            <div class="legend-section">
+                <div class="legend-section-title">凡例一覧（${seamlessLegendData.length}項目）</div>
+                <p style="font-size: 0.75rem; color: #666; margin-bottom: 10px;">
+                    主要な岩石タイプ別に分類されています
+                </p>
+            </div>
+        `;
+
+        for (const [groupName, items] of Object.entries(groups)) {
+            legendHtml += `
+                <div class="legend-section">
+                    <div class="legend-section-title">${groupName}（${items.length}件）</div>
+            `;
+
+            // 各グループの最初の20項目のみ表示
+            const displayItems = items.slice(0, 20);
+            displayItems.forEach(item => {
+                const color = `#${item.value || '999999'}`;
+                const title = item.lithology_ja || item.title || 'N/A';
+                const age = item.formationAge_ja || '';
+
+                legendHtml += `
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: ${color};"></div>
+                        <div class="legend-text">
+                            <div class="legend-text-title">${title}</div>
+                            ${age ? `<div class="legend-text-desc">${age}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (items.length > 20) {
+                legendHtml += `
+                    <p style="font-size: 0.75rem; color: #666; text-align: center; padding: 5px;">
+                        他 ${items.length - 20} 項目...
+                    </p>
+                `;
+            }
+
+            legendHtml += '</div>';
+        }
+
+        legendHtml += `
+            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3.1/legend.html" target="_blank" class="legend-link">
+                🔗 完全な凡例を開く
+            </a>
+        `;
+
+        content.innerHTML = legendHtml;
+
+    } catch (error) {
+        console.error('シームレス凡例読み込みエラー:', error);
+        content.innerHTML = `
+            <div class="legend-error">
+                凡例の読み込みに失敗しました。
+            </div>
+            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3.1/legend.html" target="_blank" class="legend-link">
+                🔗 凡例ページを開く
+            </a>
+        `;
+    }
+}
+
+/**
+ * 凡例サイドバーを閉じる
+ */
+function closeLegendSidebar() {
+    const sidebar = document.getElementById('legendSidebar');
+    const toggleBtn = document.getElementById('legendSidebarToggle');
+
+    sidebar.classList.add('hidden');
+    toggleBtn.classList.remove('hidden');
+
+    // トグルボタンのアイコンを開く方向に
+    toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    toggleBtn.title = '凡例パネルを開く';
+
+    // ズームコントロールも非表示に
+    const zoomControls = document.getElementById('legendZoomControls');
+    if (zoomControls) {
+        zoomControls.classList.add('hidden');
+    }
+}
+
+/**
+ * 凡例サイドバーを開く
+ */
+function openLegendSidebar() {
+    const sidebar = document.getElementById('legendSidebar');
+    const toggleBtn = document.getElementById('legendSidebarToggle');
+
+    sidebar.classList.remove('hidden');
+    toggleBtn.classList.add('hidden');
+}
+
+/**
+ * 凡例サイドバーリサイズ機能の初期化
+ */
+function initLegendSidebarResize() {
+    const handle = document.getElementById('legendResizeHandle');
+    const sidebar = document.getElementById('legendSidebar');
+
+    handle.addEventListener('mousedown', (e) => {
+        legendSidebarResizing = true;
+        legendSidebarStartX = e.clientX;
+        legendSidebarStartWidth = sidebar.offsetWidth;
+        handle.classList.add('active');
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!legendSidebarResizing) return;
+
+        const dx = legendSidebarStartX - e.clientX;
+        const newWidth = Math.max(280, Math.min(window.innerWidth * 0.6, legendSidebarStartWidth + dx));
+        sidebar.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (legendSidebarResizing) {
+            legendSidebarResizing = false;
+            handle.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+    });
+}
+
+/**
+ * 画像ビューアの初期化
+ */
+function initImageViewer() {
+    const viewer = document.getElementById('imageViewer');
+    const content = document.getElementById('imageViewerContent');
+    const image = document.getElementById('viewerImage');
+
+    // 閉じるボタン
+    document.getElementById('closeViewerBtn').addEventListener('click', closeImageViewer);
+
+    // ズームボタン
+    document.getElementById('zoomInBtn').addEventListener('click', () => zoomImage(0.25));
+    document.getElementById('zoomOutBtn').addEventListener('click', () => zoomImage(-0.25));
+    document.getElementById('zoomResetBtn').addEventListener('click', resetImageZoom);
+
+    // マウスホイールでズーム
+    content.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        zoomImage(delta);
+    });
+
+    // ドラッグでパン
+    content.addEventListener('mousedown', (e) => {
+        viewerPanning = true;
+        viewerStartX = e.pageX - content.offsetLeft;
+        viewerStartY = e.pageY - content.offsetTop;
+        viewerScrollLeft = content.scrollLeft;
+        viewerScrollTop = content.scrollTop;
+        content.style.cursor = 'grabbing';
+    });
+
+    content.addEventListener('mousemove', (e) => {
+        if (!viewerPanning) return;
+        e.preventDefault();
+        const x = e.pageX - content.offsetLeft;
+        const y = e.pageY - content.offsetTop;
+        const walkX = (x - viewerStartX) * 1.5;
+        const walkY = (y - viewerStartY) * 1.5;
+        content.scrollLeft = viewerScrollLeft - walkX;
+        content.scrollTop = viewerScrollTop - walkY;
+    });
+
+    content.addEventListener('mouseup', () => {
+        viewerPanning = false;
+        content.style.cursor = 'grab';
+    });
+
+    content.addEventListener('mouseleave', () => {
+        viewerPanning = false;
+        content.style.cursor = 'grab';
+    });
+
+    // ESCキーで閉じる
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !viewer.classList.contains('hidden')) {
+            closeImageViewer();
+        }
+    });
+}
+
+/**
+ * 画像ビューアを開く
+ */
+function openImageViewer(src, title) {
+    const viewer = document.getElementById('imageViewer');
+    const image = document.getElementById('viewerImage');
+    const titleEl = document.getElementById('imageViewerTitle');
+
+    // 画像をロード
+    image.src = src;
+    titleEl.textContent = title || '凡例';
+
+    // ズームをリセット
+    viewerZoom = 1;
+    updateImageZoom();
+
+    // ビューアを表示
+    viewer.classList.remove('hidden');
+
+    // 画像読み込み完了後にスクロール位置を中央に
+    image.onload = () => {
+        const content = document.getElementById('imageViewerContent');
+        content.scrollLeft = (content.scrollWidth - content.clientWidth) / 2;
+        content.scrollTop = (content.scrollHeight - content.clientHeight) / 2;
+    };
+}
+
+/**
+ * 画像ビューアを閉じる
+ */
+function closeImageViewer() {
+    const viewer = document.getElementById('imageViewer');
+    viewer.classList.add('hidden');
+}
+
+/**
+ * 画像のズーム
+ */
+function zoomImage(delta) {
+    viewerZoom = Math.max(0.1, Math.min(5, viewerZoom + delta));
+    updateImageZoom();
+}
+
+/**
+ * ズームをリセット
+ */
+function resetImageZoom() {
+    viewerZoom = 1;
+    updateImageZoom();
+}
+
+/**
+ * ズーム状態を画像に適用
+ */
+function updateImageZoom() {
+    const image = document.getElementById('viewerImage');
+    const zoomLevel = document.getElementById('zoomLevel');
+
+    image.style.transform = `scale(${viewerZoom})`;
+    zoomLevel.textContent = `${Math.round(viewerZoom * 100)}%`;
+}
+
+/**
+ * 凡例サイドバー内画像ズームコントロールの初期化
+ */
+function initLegendZoomControls() {
+    document.getElementById('legendBackBtn').addEventListener('click', exitLegendImageZoom);
+    document.getElementById('legendZoomInBtn').addEventListener('click', () => zoomLegendImage(0.25));
+    document.getElementById('legendZoomOutBtn').addEventListener('click', () => zoomLegendImage(-0.25));
+    document.getElementById('legendZoomResetBtn').addEventListener('click', resetLegendImageZoom);
+    document.getElementById('legendZoomFitBtn').addEventListener('click', fitLegendImage);
+}
+
+/**
+ * 凡例画像をズームモードで表示（パネル内拡大）
+ */
+function openLegendImageZoom(imgElement) {
+    const content = document.getElementById('legendContent');
+    const zoomControls = document.getElementById('legendZoomControls');
+
+    // 現在の画像を保存
+    currentLegendImage = imgElement.src;
+
+    // ズームモード用のHTMLを生成
+    content.innerHTML = `
+        <div class="legend-zoom-mode">
+            <div class="legend-zoom-container" id="legendZoomContainer">
+                <img src="${currentLegendImage}" alt="凡例" id="legendZoomImage" />
+            </div>
+        </div>
+    `;
+
+    // ズームコントロールを表示
+    zoomControls.classList.remove('hidden');
+
+    // パネル内でのドラッグ（パン）機能を設定
+    const container = document.getElementById('legendZoomContainer');
+    const img = document.getElementById('legendZoomImage');
+
+    // マウスホイールでズーム（マウス位置を中心に）
+    container.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        zoomLegendImageAtPoint(delta, e.clientX, e.clientY);
+    });
+
+    // ドラッグでパン
+    container.addEventListener('mousedown', startLegendImagePan);
+    container.addEventListener('mousemove', handleLegendImagePan);
+    container.addEventListener('mouseup', endLegendImagePan);
+    container.addEventListener('mouseleave', endLegendImagePan);
+
+    // 画像読み込み完了後にフィット
+    img.onload = () => {
+        legendImageNaturalWidth = img.naturalWidth;
+        legendImageNaturalHeight = img.naturalHeight;
+        legendImagePosX = 0;
+        legendImagePosY = 0;
+        fitLegendImage();
+    };
+}
+
+/**
+ * パネル内画像パンの開始
+ */
+function startLegendImagePan(e) {
+    const container = document.getElementById('legendZoomContainer');
+    if (!container) return;
+
+    legendImagePanning = true;
+    legendImageStartX = e.clientX;
+    legendImageStartY = e.clientY;
+    legendImageStartPosX = legendImagePosX;
+    legendImageStartPosY = legendImagePosY;
+    container.style.cursor = 'grabbing';
+    e.preventDefault();
+}
+
+/**
+ * パネル内画像パンの処理
+ */
+function handleLegendImagePan(e) {
+    if (!legendImagePanning) return;
+
+    const dx = e.clientX - legendImageStartX;
+    const dy = e.clientY - legendImageStartY;
+
+    legendImagePosX = legendImageStartPosX + dx;
+    legendImagePosY = legendImageStartPosY + dy;
+
+    updateLegendImagePosition();
+}
+
+/**
+ * パネル内画像パンの終了
+ */
+function endLegendImagePan() {
+    legendImagePanning = false;
+    const container = document.getElementById('legendZoomContainer');
+    if (container) {
+        container.style.cursor = 'grab';
+    }
+}
+
+/**
+ * 凡例画像の位置を更新
+ */
+function updateLegendImagePosition() {
+    const img = document.getElementById('legendZoomImage');
+    if (img) {
+        img.style.left = legendImagePosX + 'px';
+        img.style.top = legendImagePosY + 'px';
+    }
+}
+
+/**
+ * 凡例画像のズーム（ボタン用、中央基点）
+ */
+function zoomLegendImage(delta) {
+    const container = document.getElementById('legendZoomContainer');
+    if (!container) {
+        legendImageZoom = Math.max(0.1, Math.min(5, legendImageZoom + delta));
+        updateLegendImageZoom();
+        return;
+    }
+
+    // コンテナの中央を基点にズーム
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    zoomLegendImageAtPoint(delta, centerX, centerY);
+}
+
+/**
+ * 凡例画像のズーム（指定ポイントを中心に）
+ */
+function zoomLegendImageAtPoint(delta, clientX, clientY) {
+    const container = document.getElementById('legendZoomContainer');
+    const img = document.getElementById('legendZoomImage');
+    if (!container || !img || legendImageNaturalWidth === 0) return;
+
+    // 現在のズーム前の状態を保存
+    const oldZoom = legendImageZoom;
+    const newZoom = Math.max(0.1, Math.min(5, legendImageZoom + delta));
+
+    if (oldZoom === newZoom) return;
+
+    // コンテナ内でのマウス位置
+    const rect = container.getBoundingClientRect();
+    const mouseXInContainer = clientX - rect.left;
+    const mouseYInContainer = clientY - rect.top;
+
+    // マウス位置が画像上のどの位置を指しているか（画像の左上からの相対位置）
+    const imageX = (mouseXInContainer - legendImagePosX) / oldZoom;
+    const imageY = (mouseYInContainer - legendImagePosY) / oldZoom;
+
+    // ズームを適用
+    legendImageZoom = newZoom;
+    updateLegendImageZoom();
+
+    // ズーム後、同じ画像上の位置がマウスの下に来るように位置を調整
+    legendImagePosX = mouseXInContainer - imageX * newZoom;
+    legendImagePosY = mouseYInContainer - imageY * newZoom;
+    updateLegendImagePosition();
+}
+
+/**
+ * 凡例画像のズームをリセット（等倍）
+ */
+function resetLegendImageZoom() {
+    const container = document.getElementById('legendZoomContainer');
+    if (!container) return;
+
+    legendImageZoom = 1;
+    updateLegendImageZoom();
+
+    // 画像を中央に配置
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    const imgWidth = legendImageNaturalWidth * legendImageZoom;
+    const imgHeight = legendImageNaturalHeight * legendImageZoom;
+
+    legendImagePosX = (containerWidth - imgWidth) / 2;
+    legendImagePosY = (containerHeight - imgHeight) / 2;
+    updateLegendImagePosition();
+}
+
+/**
+ * 凡例画像をコンテナにフィット
+ */
+function fitLegendImage() {
+    const container = document.getElementById('legendZoomContainer');
+    const img = document.getElementById('legendZoomImage');
+    if (!container || !img) return;
+
+    // コンテナと画像のサイズを取得
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+
+    // 画像の自然サイズ
+    const imgWidth = legendImageNaturalWidth || img.naturalWidth || img.width;
+    const imgHeight = legendImageNaturalHeight || img.naturalHeight || img.height;
+
+    if (imgWidth === 0 || imgHeight === 0) return;
+
+    // フィットするズーム倍率を計算
+    const scaleX = containerWidth / imgWidth;
+    const scaleY = containerHeight / imgHeight;
+    legendImageZoom = Math.min(scaleX, scaleY) * 0.95; // 少し余白を持たせる
+
+    updateLegendImageZoom();
+
+    // 画像を中央に配置
+    const scaledWidth = imgWidth * legendImageZoom;
+    const scaledHeight = imgHeight * legendImageZoom;
+    legendImagePosX = (containerWidth - scaledWidth) / 2;
+    legendImagePosY = (containerHeight - scaledHeight) / 2;
+    updateLegendImagePosition();
+}
+
+/**
+ * 凡例画像のズーム状態を適用
+ */
+function updateLegendImageZoom() {
+    const img = document.getElementById('legendZoomImage');
+    const zoomLevel = document.getElementById('legendZoomLevel');
+
+    if (img && legendImageNaturalWidth > 0 && legendImageNaturalHeight > 0) {
+        // transformではなく、width/heightを直接設定してスクロール可能にする
+        img.style.width = (legendImageNaturalWidth * legendImageZoom) + 'px';
+        img.style.height = (legendImageNaturalHeight * legendImageZoom) + 'px';
+    }
+    if (zoomLevel) {
+        zoomLevel.textContent = `${Math.round(legendImageZoom * 100)}%`;
+    }
+}
+
+/**
+ * 凡例画像ズームモードを終了
+ */
+function exitLegendImageZoom() {
+    const zoomControls = document.getElementById('legendZoomControls');
+    zoomControls.classList.add('hidden');
+
+    // 元の凡例表示に戻る
+    if (currentLegendLayerId === 'seamless') {
+        showSeamlessLegend();
+    } else if (currentLegendLayerId && activeLayers.has(currentLegendLayerId)) {
+        const layerInfo = activeLayers.get(currentLegendLayerId);
+        showLegend(currentLegendLayerId, layerInfo.data);
+    }
+
+    currentLegendImage = null;
+}
+
+// DOMContentLoaded時に初期化
+document.addEventListener('DOMContentLoaded', init);

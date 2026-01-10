@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>産総研 地質図検索ビューア</title>
+    <link rel="stylesheet" href="libs/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="libs/fontawesome/css/all.min.css" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="app">
+        <!-- サイドパネル -->
+        <div id="sidebar">
+            <h1>地質図検索</h1>
+
+            <!-- 検索コントロール -->
+            <div class="control-section">
+                <button id="searchBtn" class="primary-btn">
+                    <span class="btn-icon">🔍</span>
+                    表示範囲で検索
+                </button>
+                <div id="searchStatus" class="status-text"></div>
+            </div>
+
+            <!-- 検索結果リスト -->
+            <div class="control-section">
+                <h2>検索結果 <span id="resultCount">(0件)</span></h2>
+                <div id="searchResults" class="result-list">
+                    <p class="placeholder-text">検索ボタンを押すと、現在の表示範囲内にある地質図を検索します。</p>
+                </div>
+            </div>
+
+            <!-- 表示中のレイヤー -->
+            <div class="control-section">
+                <h2>表示中の地質図 <span id="layerCount">(0枚)</span></h2>
+                <div id="activeLayers" class="layer-list">
+                    <p class="placeholder-text">地質図が選択されていません。</p>
+                </div>
+            </div>
+
+            <!-- シームレス地質図コントロール -->
+            <div class="control-section">
+                <h2>シームレス地質図</h2>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="seamlessToggle" />
+                    20万分の1シームレス地質図を表示
+                </label>
+                <div id="seamlessControls" style="display: none;">
+                    <div class="slider-container" id="seamlessOpacityContainer">
+                        <label>透明度: <span id="seamlessOpacityValue">70</span>%</label>
+                        <input type="range" id="seamlessOpacity" min="0" max="100" value="70" />
+                    </div>
+                    <button id="seamlessLegendBtn" class="seamless-legend-btn">
+                        📋 凡例を表示
+                    </button>
+                </div>
+            </div>
+
+            <!-- フッター -->
+            <div class="footer">
+                <p>データ提供: <a href="https://gbank.gsj.jp/geonavi/" target="_blank">産総研 地質図Navi</a></p>
+                <p><a href="https://data.gsj.jp/gkan/" target="_blank">地質調査総合センター CKAN</a></p>
+            </div>
+        </div>
+
+        <!-- 地図コンテナ -->
+        <div id="map"></div>
+
+        <!-- 右サイドバー開閉ボタン -->
+        <button id="legendSidebarToggle" class="legend-sidebar-toggle" title="凡例パネルを開く">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+
+        <!-- 右サイドバー（凡例） -->
+        <div id="legendSidebar" class="legend-sidebar hidden">
+            <!-- リサイズハンドル -->
+            <div id="legendResizeHandle" class="legend-resize-handle"></div>
+            <div class="legend-sidebar-header">
+                <h2 id="legendTitle">凡例</h2>
+                <button id="closeLegendBtn" class="legend-close-btn" title="閉じる">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <!-- 凡例画像用ズームコントロール -->
+            <div id="legendZoomControls" class="legend-zoom-controls hidden">
+                <button class="legend-zoom-btn legend-back-btn" id="legendBackBtn" title="戻る">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button class="legend-zoom-btn" id="legendZoomOutBtn" title="縮小">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <span id="legendZoomLevel">100%</span>
+                <button class="legend-zoom-btn" id="legendZoomInBtn" title="拡大">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="legend-zoom-btn" id="legendZoomResetBtn" title="リセット">1:1</button>
+                <button class="legend-zoom-btn" id="legendZoomFitBtn" title="フィット">Fit</button>
+            </div>
+            <div id="legendContent" class="legend-content">
+                <p class="placeholder-text">地質図を選択すると凡例が表示されます。</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="libs/leaflet/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
