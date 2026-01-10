@@ -270,15 +270,6 @@ async function fetchGeologicalMaps(bbox) {
                 );
                 const pdfResource = dataset.resources?.find(r => r.format === 'PDF');
 
-                // デバッグ: リソースフォーマット一覧を出力
-                console.log(`[${dataset.title}] リソースフォーマット:`, dataset.resources?.map(r => r.format));
-
-                const geotiffResource = dataset.resources?.find(r =>
-                    r.format === 'GEOTIFF' || r.format === 'GeoTIFF' || r.format === 'geotiff' ||
-                    r.format === 'TIFF' || r.format === 'Tiff' || r.format === 'tiff' ||
-                    r.format === 'GeoTiff' || r.format === 'Geotiff'
-                );
-
                 mapsWithTiles.push({
                     id: dataset.id,
                     name: dataset.name,
@@ -290,8 +281,7 @@ async function fetchGeologicalMaps(bbox) {
                     ldUrl: ldResource?.url,
                     bounds: mapBounds,
                     imageUrl: imageResource?.url,
-                    pdfUrl: pdfResource?.url,
-                    geotiffUrl: geotiffResource?.url
+                    pdfUrl: pdfResource?.url
                 });
             }
         }
@@ -618,14 +608,19 @@ async function addLayer(mapData) {
             }
         }
 
-        // Linked Dataメタデータからtitle_j, authors_jを取得（TileJSONで取得できなかった場合）
-        if (!mapTitleJ && mapData.ldUrl) {
+        // Linked Dataメタデータからtitle_j, authors_j, geotiffUrlを取得
+        let geotiffUrl = mapData.geotiffUrl;
+        if (mapData.ldUrl) {
             try {
                 const ldResponse = await fetch(mapData.ldUrl);
                 if (ldResponse.ok) {
                     const ldData = await ldResponse.json();
-                    if (ldData.title_j) mapTitleJ = ldData.title_j;
-                    if (ldData.authors_j) mapAuthorsJ = ldData.authors_j;
+                    console.log('LD JSON:', ldData);  // デバッグ用
+                    if (!mapTitleJ && ldData.title_j) mapTitleJ = ldData.title_j;
+                    if (!mapAuthorsJ && ldData.authors_j) mapAuthorsJ = ldData.authors_j;
+                    // GeoTIFF URLを取得
+                    if (ldData.geotiff) geotiffUrl = ldData.geotiff;
+                    if (ldData.download?.geotiff) geotiffUrl = ldData.download.geotiff;
                 }
             } catch (e) {
                 console.warn('LDメタデータ取得エラー:', e);
@@ -665,7 +660,8 @@ async function addLayer(mapData) {
                 mapName,
                 mapDescription,
                 mapTitleJ,
-                mapAuthorsJ
+                mapAuthorsJ,
+                geotiffUrl
             }
         });
 
