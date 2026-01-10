@@ -608,14 +608,24 @@ async function addLayer(mapData) {
             }
         }
 
-        // Linked Dataメタデータからtitle_j, authors_jを取得（TileJSONで取得できなかった場合）
-        if (!mapTitleJ && mapData.ldUrl) {
+        // Linked Dataメタデータからtitle_j, authors_j, geotiffUrlを取得
+        let geotiffUrl = mapData.geotiffUrl;
+        if (mapData.ldUrl) {
             try {
                 const ldResponse = await fetch(mapData.ldUrl);
                 if (ldResponse.ok) {
                     const ldData = await ldResponse.json();
-                    if (ldData.title_j) mapTitleJ = ldData.title_j;
-                    if (ldData.authors_j) mapAuthorsJ = ldData.authors_j;
+                    if (!mapTitleJ && ldData.title_j) mapTitleJ = ldData.title_j;
+                    if (!mapAuthorsJ && ldData.authors_j) mapAuthorsJ = ldData.authors_j;
+                    // GeoTIFF URLをdownloadData配列から取得
+                    if (ldData.downloadData) {
+                        const geotiffData = ldData.downloadData.find(d =>
+                            d.title === 'GeoTIFF' || d.data_type?.includes('GeoTiff')
+                        );
+                        if (geotiffData && geotiffData['@id']) {
+                            geotiffUrl = geotiffData['@id'];
+                        }
+                    }
                 }
             } catch (e) {
                 console.warn('LDメタデータ取得エラー:', e);
@@ -655,7 +665,8 @@ async function addLayer(mapData) {
                 mapName,
                 mapDescription,
                 mapTitleJ,
-                mapAuthorsJ
+                mapAuthorsJ,
+                geotiffUrl
             }
         });
 
@@ -912,6 +923,15 @@ async function showLegend(layerId, mapData) {
             legendHtml += `
                 <a href="${mapData.pdfUrl}" target="_blank" class="legend-link">
                     📄 説明書（PDF）を開く
+                </a>
+            `;
+        }
+
+        // GeoTIFFダウンロードリンク
+        if (mapData.geotiffUrl) {
+            legendHtml += `
+                <a href="${mapData.geotiffUrl}" target="_blank" class="legend-link" download>
+                    🗺️ GeoTIFFをダウンロード
                 </a>
             `;
         }
