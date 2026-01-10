@@ -216,6 +216,12 @@ async function fetchGeologicalMaps(bbox) {
             (r.name?.includes('TileJSON') || r.url?.includes('getTileJson'))
         );
 
+        // Linked Data メタデータリソースを探す（title_j, authors_j等を含む）
+        const ldResource = dataset.resources?.find(r =>
+            r.format === 'JSON' &&
+            r.url?.includes('/ld/resource/')
+        );
+
         if (tileResource || tileJsonResource) {
             // 範囲情報を取得
             let mapBounds = null;
@@ -272,6 +278,7 @@ async function fetchGeologicalMaps(bbox) {
                     author: dataset.author,
                     tileUrl: tileResource?.url,
                     tileJsonUrl: tileJsonResource?.url,
+                    ldUrl: ldResource?.url,
                     bounds: mapBounds,
                     imageUrl: imageResource?.url,
                     pdfUrl: pdfResource?.url
@@ -598,6 +605,20 @@ async function addLayer(mapData) {
                 }
             } catch (e) {
                 console.warn('TileJSON取得エラー:', e);
+            }
+        }
+
+        // Linked Dataメタデータからtitle_j, authors_jを取得（TileJSONで取得できなかった場合）
+        if (!mapTitleJ && mapData.ldUrl) {
+            try {
+                const ldResponse = await fetch(mapData.ldUrl);
+                if (ldResponse.ok) {
+                    const ldData = await ldResponse.json();
+                    if (ldData.title_j) mapTitleJ = ldData.title_j;
+                    if (ldData.authors_j) mapAuthorsJ = ldData.authors_j;
+                }
+            } catch (e) {
+                console.warn('LDメタデータ取得エラー:', e);
             }
         }
 
