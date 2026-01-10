@@ -157,6 +157,82 @@ body {
     color: #888;
 }
 
+/* アコーディオン */
+.result-accordion {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.result-accordion:last-child {
+    border-bottom: none;
+}
+
+.result-accordion-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    background: #f0f0f0;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+    gap: 6px;
+}
+
+.result-accordion-header:hover {
+    background: #e8e8e8;
+}
+
+.result-accordion-header.open {
+    background: #e8f5e9;
+    border-bottom: 1px solid #c8e6c9;
+}
+
+.accordion-icon {
+    font-size: 0.7rem;
+    color: #666;
+    width: 12px;
+    flex-shrink: 0;
+}
+
+.accordion-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.accordion-count {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: normal;
+}
+
+.accordion-selected-badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    background: #2c5f2d;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.result-accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease-out;
+}
+
+.result-accordion-content.open {
+    max-height: 1000px;
+    transition: max-height 0.35s ease-in;
+}
+
+.result-accordion-content .result-item {
+    padding-left: 24px;
+}
+
+.result-accordion-content .result-item:first-child {
+    border-top: none;
+}
+
 /* 表示中レイヤーアイテム */
 .layer-item {
     padding: 10px 15px;
@@ -222,12 +298,12 @@ body {
 }
 
 .layer-btn.legend-btn {
-    background: #fff3e0;
-    color: #e65100;
+    background: #e8f5e9;
+    color: #2c5f2d;
 }
 
 .layer-btn.legend-btn:hover {
-    background: #ffe0b2;
+    background: #c8e6c9;
 }
 
 .layer-item-opacity {
@@ -308,9 +384,9 @@ body {
     width: 100%;
     padding: 10px 15px;
     margin-top: 10px;
-    background: #fff3e0;
-    color: #e65100;
-    border: 1px solid #ffcc80;
+    background: #e8f5e9;
+    color: #2c5f2d;
+    border: 1px solid #a5d6a7;
     border-radius: 6px;
     font-size: 0.85rem;
     cursor: pointer;
@@ -322,8 +398,8 @@ body {
 }
 
 .seamless-legend-btn:hover {
-    background: #ffe0b2;
-    border-color: #ffb74d;
+    background: #c8e6c9;
+    border-color: #81c784;
 }
 
 /* フッター */
@@ -409,7 +485,7 @@ body {
     height: 64px;
     border: none;
     border-radius: 8px 0 0 8px;
-    background: linear-gradient(135deg, #e65100, #ff8f00);
+    background: linear-gradient(135deg, #2c5f2d, #3a7d3a);
     color: white;
     cursor: pointer;
     font-size: 1rem;
@@ -422,7 +498,7 @@ body {
 }
 
 .legend-sidebar-toggle:hover {
-    background: linear-gradient(135deg, #bf360c, #e65100);
+    background: linear-gradient(135deg, #245024, #2c5f2d);
     width: 36px;
 }
 
@@ -463,7 +539,7 @@ body {
 
 .legend-resize-handle:hover,
 .legend-resize-handle.active {
-    background: rgba(230, 81, 0, 0.3);
+    background: rgba(44, 95, 45, 0.3);
 }
 
 .legend-resize-handle::after {
@@ -483,7 +559,7 @@ body {
 .legend-resize-handle:hover::after,
 .legend-resize-handle.active::after {
     opacity: 1;
-    background: #e65100;
+    background: #2c5f2d;
 }
 
 .legend-sidebar-header {
@@ -491,7 +567,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 12px 15px;
-    background: linear-gradient(135deg, #e65100, #ff8f00);
+    background: linear-gradient(135deg, #2c5f2d, #3a7d3a);
     color: white;
     flex-shrink: 0;
 }
@@ -629,8 +705,8 @@ body {
 }
 
 .legend-tab.active {
-    color: #e65100;
-    border-bottom-color: #e65100;
+    color: #2c5f2d;
+    border-bottom-color: #2c5f2d;
     background: white;
 }
 
@@ -723,7 +799,7 @@ body {
 }
 
 .legend-loading .loading {
-    border-color: #e65100;
+    border-color: #2c5f2d;
     border-top-color: transparent;
     width: 24px;
     height: 24px;

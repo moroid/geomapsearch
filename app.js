@@ -292,35 +292,193 @@ function boundsIntersect(a, b) {
 }
 
 /**
- * 検索結果を表示
+ * 検索結果をカテゴリ分類
+ */
+function categorizeResults(results) {
+    const categories = {
+        '火山地質図': [],
+        '水理地質図': [],
+        '表層地質図': [],
+        '海洋地質図': [],
+        '活断層図': [],
+        '環境地質図': [],
+        '地熱地質図': [],
+        '鉱物資源図': [],
+        '重力図': [],
+        '地質図幅': [],
+        'その他': []
+    };
+
+    // カテゴリ判定のキーワード
+    const categoryKeywords = {
+        '火山地質図': ['火山', 'volcano', '噴火'],
+        '水理地質図': ['水理', '地下水', '帯水層', '水文'],
+        '表層地質図': ['表層', '土地分類', '地盤'],
+        '海洋地質図': ['海洋', '海底', '沿岸', '海域'],
+        '活断層図': ['活断層', '断層'],
+        '環境地質図': ['環境'],
+        '地熱地質図': ['地熱'],
+        '鉱物資源図': ['鉱物', '鉱床', '資源'],
+        '重力図': ['重力'],
+        '地質図幅': ['地質図幅', '万分の1地質図']
+    };
+
+    results.forEach(result => {
+        const title = result.title.toLowerCase();
+        let assigned = false;
+
+        for (const [category, keywords] of Object.entries(categoryKeywords)) {
+            for (const keyword of keywords) {
+                if (title.includes(keyword.toLowerCase())) {
+                    categories[category].push(result);
+                    assigned = true;
+                    break;
+                }
+            }
+            if (assigned) break;
+        }
+
+        if (!assigned) {
+            categories['その他'].push(result);
+        }
+    });
+
+    // 空のカテゴリを除外
+    const filteredCategories = {};
+    for (const [category, items] of Object.entries(categories)) {
+        if (items.length > 0) {
+            filteredCategories[category] = items;
+        }
+    }
+
+    return filteredCategories;
+}
+
+/**
+ * 検索結果を表示（カテゴリ別アコーディオン）
  */
 function renderSearchResults(results) {
     const container = document.getElementById('searchResults');
     container.innerHTML = '';
 
+    // カテゴリが1つ以下または結果が少ない場合はフラット表示
+    const categories = categorizeResults(results);
+    const categoryCount = Object.keys(categories).length;
+
+    if (categoryCount <= 1 || results.length <= 5) {
+        // フラット表示
+        renderFlatResults(container, results);
+    } else {
+        // カテゴリ別アコーディオン表示
+        renderCategorizedResults(container, categories);
+    }
+}
+
+/**
+ * フラット表示（従来形式）
+ */
+function renderFlatResults(container, results) {
     results.forEach((result, index) => {
-        const item = document.createElement('div');
-        item.className = 'result-item';
-        if (activeLayers.has(result.id)) {
-            item.classList.add('selected');
-        }
-
-        // タイトルを短縮
-        const shortTitle = result.title.length > 50
-            ? result.title.substring(0, 50) + '...'
-            : result.title;
-
-        item.innerHTML = `
-            <div class="result-item-title">${shortTitle}</div>
-            <div class="result-item-info">
-                範囲: ${result.bounds.south.toFixed(2)}°N - ${result.bounds.north.toFixed(2)}°N,
-                ${result.bounds.west.toFixed(2)}°E - ${result.bounds.east.toFixed(2)}°E
-            </div>
-        `;
-
-        item.addEventListener('click', () => toggleMapLayer(result));
+        const item = createResultItem(result, index);
         container.appendChild(item);
     });
+}
+
+/**
+ * カテゴリ別アコーディオン表示
+ */
+function renderCategorizedResults(container, categories) {
+    // アコーディオンの開閉状態を保持（初回は最初のカテゴリのみ開く）
+    let isFirst = true;
+
+    for (const [categoryName, items] of Object.entries(categories)) {
+        const accordion = document.createElement('div');
+        accordion.className = 'result-accordion';
+
+        // アコーディオンヘッダー
+        const header = document.createElement('div');
+        header.className = 'result-accordion-header';
+        if (isFirst) {
+            header.classList.add('open');
+        }
+
+        // 選択中のアイテム数をカウント
+        const selectedCount = items.filter(item => activeLayers.has(item.id)).length;
+        const selectedBadge = selectedCount > 0
+            ? `<span class="accordion-selected-badge">${selectedCount}選択中</span>`
+            : '';
+
+        header.innerHTML = `
+            <span class="accordion-icon">${isFirst ? '▼' : '▶'}</span>
+            <span class="accordion-title">${categoryName}</span>
+            <span class="accordion-count">(${items.length}件)</span>
+            ${selectedBadge}
+        `;
+
+        // アコーディオンコンテンツ
+        const content = document.createElement('div');
+        content.className = 'result-accordion-content';
+        if (isFirst) {
+            content.classList.add('open');
+        }
+
+        // カテゴリ内のアイテムを追加
+        items.forEach((result, index) => {
+            const item = createResultItem(result, index);
+            item.dataset.resultId = result.id;
+            content.appendChild(item);
+        });
+
+        // アコーディオンの開閉イベント
+        header.addEventListener('click', () => {
+            const isOpen = header.classList.contains('open');
+
+            if (isOpen) {
+                header.classList.remove('open');
+                content.classList.remove('open');
+                header.querySelector('.accordion-icon').textContent = '▶';
+            } else {
+                header.classList.add('open');
+                content.classList.add('open');
+                header.querySelector('.accordion-icon').textContent = '▼';
+            }
+        });
+
+        accordion.appendChild(header);
+        accordion.appendChild(content);
+        container.appendChild(accordion);
+
+        isFirst = false;
+    }
+}
+
+/**
+ * 検索結果アイテムを作成
+ */
+function createResultItem(result, index) {
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    item.dataset.resultId = result.id;
+
+    if (activeLayers.has(result.id)) {
+        item.classList.add('selected');
+    }
+
+    // タイトルを短縮
+    const shortTitle = result.title.length > 50
+        ? result.title.substring(0, 50) + '...'
+        : result.title;
+
+    item.innerHTML = `
+        <div class="result-item-title">${shortTitle}</div>
+        <div class="result-item-info">
+            範囲: ${result.bounds.south.toFixed(2)}°N - ${result.bounds.north.toFixed(2)}°N,
+            ${result.bounds.west.toFixed(2)}°E - ${result.bounds.east.toFixed(2)}°E
+        </div>
+    `;
+
+    item.addEventListener('click', () => toggleMapLayer(result));
+    return item;
 }
 
 /**
@@ -528,12 +686,52 @@ function updateActiveLayersList() {
  * 検索結果の選択状態を更新
  */
 function updateSearchResultsSelection() {
+    // 全てのresult-itemを更新（IDベース）
     const items = document.querySelectorAll('.result-item');
-    items.forEach((item, index) => {
-        if (searchResults[index] && activeLayers.has(searchResults[index].id)) {
+    items.forEach(item => {
+        const resultId = item.dataset.resultId;
+        if (resultId && activeLayers.has(resultId)) {
             item.classList.add('selected');
         } else {
             item.classList.remove('selected');
+        }
+    });
+
+    // アコーディオンヘッダーの選択数バッジを更新
+    updateAccordionBadges();
+}
+
+/**
+ * アコーディオンヘッダーの選択数バッジを更新
+ */
+function updateAccordionBadges() {
+    const accordions = document.querySelectorAll('.result-accordion');
+    accordions.forEach(accordion => {
+        const content = accordion.querySelector('.result-accordion-content');
+        const header = accordion.querySelector('.result-accordion-header');
+        if (!content || !header) return;
+
+        // カテゴリ内の選択数をカウント
+        const items = content.querySelectorAll('.result-item');
+        let selectedCount = 0;
+        items.forEach(item => {
+            if (item.classList.contains('selected')) {
+                selectedCount++;
+            }
+        });
+
+        // 既存のバッジを削除
+        const existingBadge = header.querySelector('.accordion-selected-badge');
+        if (existingBadge) {
+            existingBadge.remove();
+        }
+
+        // 選択があればバッジを追加
+        if (selectedCount > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'accordion-selected-badge';
+            badge.textContent = `${selectedCount}選択中`;
+            header.appendChild(badge);
         }
     });
 }
