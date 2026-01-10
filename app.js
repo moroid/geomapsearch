@@ -867,9 +867,11 @@ async function showLegend(layerId, mapData) {
         let legendHtml = '';
 
         // 説明セクション（凡例より先に表示）- title_jとauthor_jのみ表示
-        if (mapData.mapTitleJ) {
-            const titleText = stripMarkdown(mapData.mapTitleJ);
-            const authorText = mapData.mapAuthorsJ ? stripMarkdown(mapData.mapAuthorsJ) : '';
+        // TileJSONのtitle_j/authors_jを優先、なければCKANのtitle/authorを使用
+        const titleText = mapData.mapTitleJ ? stripMarkdown(mapData.mapTitleJ) : (mapData.title || '');
+        const authorText = mapData.mapAuthorsJ ? stripMarkdown(mapData.mapAuthorsJ) : (mapData.author || '');
+
+        if (titleText) {
             const citationText = authorText ? `${titleText}　${authorText}` : titleText;
             const escapedCitation = citationText.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
 
