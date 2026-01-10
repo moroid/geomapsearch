@@ -269,6 +269,9 @@ async function fetchGeologicalMaps(bbox) {
                     r.format === 'JPEG' || r.format === 'JPG' || r.format === 'PNG'
                 );
                 const pdfResource = dataset.resources?.find(r => r.format === 'PDF');
+                const geotiffResource = dataset.resources?.find(r =>
+                    r.format === 'GEOTIFF' || r.format === 'GeoTIFF' || r.format === 'geotiff'
+                );
 
                 mapsWithTiles.push({
                     id: dataset.id,
@@ -281,7 +284,8 @@ async function fetchGeologicalMaps(bbox) {
                     ldUrl: ldResource?.url,
                     bounds: mapBounds,
                     imageUrl: imageResource?.url,
-                    pdfUrl: pdfResource?.url
+                    pdfUrl: pdfResource?.url,
+                    geotiffUrl: geotiffResource?.url
                 });
             }
         }
@@ -912,6 +916,15 @@ async function showLegend(layerId, mapData) {
             legendHtml += `
                 <a href="${mapData.pdfUrl}" target="_blank" class="legend-link">
                     📄 説明書（PDF）を開く
+                </a>
+            `;
+        }
+
+        // GeoTIFFダウンロードリンク
+        if (mapData.geotiffUrl) {
+            legendHtml += `
+                <a href="${mapData.geotiffUrl}" target="_blank" class="legend-link" download>
+                    🗺️ GeoTIFFをダウンロード
                 </a>
             `;
         }
