@@ -94,6 +94,7 @@ geomapsearch/
 ├── app.js              # アプリケーションロジック
 ├── style.css           # スタイルシート
 ├── README.md           # このファイル
+├── LICENSE             # MITライセンス
 └── libs/               # 外部ライブラリ
     ├── leaflet/        # Leaflet.js
     └── fontawesome/    # Font Awesome
@@ -103,3 +104,9 @@ geomapsearch/
 
 - モダンブラウザ（Chrome, Firefox, Safari, Edge）
 - インターネット接続（外部API・タイルデータへのアクセスに必要）
+
+## ライセンス
+
+このプロジェクトは [MIT License](LICENSE) の下で公開されています。
+
+ただし、本アプリケーションが利用する外部データ（地質図データ、地図タイル等）については、各提供元のライセンス・利用規約に従ってください。詳細は上記「ライセンス・権利関係」セクションを参照してください。
