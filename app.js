@@ -866,8 +866,8 @@ async function showLegend(layerId, mapData) {
         // 地質図の凡例情報を構築
         let legendHtml = '';
 
-        // 説明セクション（凡例より先に表示）- title_jとauthor_jのみ表示
-        // TileJSONのtitle_j/authors_jを優先、なければCKANのtitle/authorを使用
+        // 説明セクション（凡例より先に表示）- title_jとauthors_jのみ表示
+        // TileJSONのtitle_j/authors_jを優先、なければCKANのtitle/authorにフォールバック
         const titleText = mapData.mapTitleJ ? stripMarkdown(mapData.mapTitleJ) : (mapData.title || '');
         const authorText = mapData.mapAuthorsJ ? stripMarkdown(mapData.mapAuthorsJ) : (mapData.author || '');
 
