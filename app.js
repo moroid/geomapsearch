@@ -866,45 +866,19 @@ async function showLegend(layerId, mapData) {
         // 地質図の凡例情報を構築
         let legendHtml = '';
 
-        // 説明セクション（凡例より先に表示）
-        // 引用テキストを生成: title_j + authors_j
-        let citationText = '';
+        // 説明セクション（凡例より先に表示）- title_jとauthor_jのみ表示
         if (mapData.mapTitleJ) {
-            // マークダウン記法を除去してプレーンテキストに変換
-            citationText = stripMarkdown(mapData.mapTitleJ);
-            if (mapData.mapAuthorsJ) {
-                citationText += `　${stripMarkdown(mapData.mapAuthorsJ)}`;
-            }
-        }
-
-        // TileJSONのtitle_jがある場合
-        if (citationText) {
-            // コピー用にエスケープ処理
+            const titleText = stripMarkdown(mapData.mapTitleJ);
+            const authorText = mapData.mapAuthorsJ ? stripMarkdown(mapData.mapAuthorsJ) : '';
+            const citationText = authorText ? `${titleText}　${authorText}` : titleText;
             const escapedCitation = citationText.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
             legendHtml += `
                 <div class="legend-section">
                     <div class="legend-section-title">説明</div>
                     <div class="legend-citation-line">
                         <p class="legend-citation-text">${escapeHtml(citationText)}</p>
                         <button class="legend-copy-btn" onclick="copyToClipboard(\`${escapedCitation}\`, this)" title="コピー">📋</button>
-                    </div>
-                </div>
-            `;
-        }
-        // フォールバック: CKANのnotesがある場合
-        else if (mapData.notes) {
-            let shortNotes = mapData.notes.length > 300
-                ? mapData.notes.substring(0, 300) + '...'
-                : mapData.notes;
-            shortNotes = stripMarkdown(shortNotes);
-            const escapedNotes = shortNotes.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-
-            legendHtml += `
-                <div class="legend-section">
-                    <div class="legend-section-title">説明</div>
-                    <div class="legend-citation-line">
-                        <p class="legend-citation-text">${escapeHtml(shortNotes)}</p>
-                        <button class="legend-copy-btn" onclick="copyToClipboard(\`${escapedNotes}\`, this)" title="コピー">📋</button>
                     </div>
                 </div>
             `;
