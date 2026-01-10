@@ -19,6 +19,7 @@ import {
     openLegendImageZoom
 } from './legend.js';
 import { copyToClipboard } from './utils.js';
+import { initMobileUI } from './mobile.js';
 
 /**
  * 初期化
@@ -26,6 +27,7 @@ import { copyToClipboard } from './utils.js';
 function init() {
     initMap();
     initEventListeners();
+    initMobileUI();
 }
 
 /**

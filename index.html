@@ -10,6 +10,14 @@
 </head>
 <body>
     <div id="app">
+        <!-- モバイル用ヘッダー -->
+        <header id="mobileHeader" class="mobile-header">
+            <h1>地質図検索</h1>
+            <button id="mobileMenuBtn" class="mobile-menu-btn" aria-label="メニュー">
+                <i class="fas fa-bars"></i>
+            </button>
+        </header>
+
         <!-- サイドパネル -->
         <div id="sidebar">
             <h1>地質図検索</h1>
@@ -66,6 +74,79 @@
 
         <!-- 地図コンテナ -->
         <div id="map"></div>
+
+        <!-- モバイル用フローティング検索ボタン -->
+        <button id="mobileSearchBtn" class="mobile-search-btn">
+            <i class="fas fa-search"></i>
+            <span>この範囲で検索</span>
+        </button>
+
+        <!-- モバイル用ボトムナビゲーション -->
+        <nav id="mobileNav" class="mobile-nav">
+            <button class="mobile-nav-item active" data-panel="search">
+                <i class="fas fa-search"></i>
+                <span>検索</span>
+            </button>
+            <button class="mobile-nav-item" data-panel="layers">
+                <i class="fas fa-layer-group"></i>
+                <span>レイヤー</span>
+            </button>
+            <button class="mobile-nav-item" data-panel="seamless">
+                <i class="fas fa-map"></i>
+                <span>シームレス</span>
+            </button>
+            <button class="mobile-nav-item" data-panel="legend">
+                <i class="fas fa-list-alt"></i>
+                <span>凡例</span>
+            </button>
+        </nav>
+
+        <!-- モバイル用ボトムシート -->
+        <div id="mobileBottomSheet" class="mobile-bottom-sheet">
+            <div class="bottom-sheet-handle"></div>
+            <div id="mobileBottomSheetContent" class="bottom-sheet-content">
+                <!-- 検索パネル -->
+                <div id="mobileSearchPanel" class="mobile-panel active">
+                    <h3>検索結果 <span id="mobileResultCount">(0件)</span></h3>
+                    <div id="mobileSearchResults" class="mobile-result-list">
+                        <p class="placeholder-text">地図を移動して検索ボタンを押してください。</p>
+                    </div>
+                </div>
+                <!-- レイヤーパネル -->
+                <div id="mobileLayersPanel" class="mobile-panel">
+                    <h3>表示中の地質図 <span id="mobileLayerCount">(0枚)</span></h3>
+                    <div id="mobileActiveLayers" class="mobile-layer-list">
+                        <p class="placeholder-text">地質図が選択されていません。</p>
+                    </div>
+                </div>
+                <!-- シームレスパネル -->
+                <div id="mobileSeamlessPanel" class="mobile-panel">
+                    <h3>シームレス地質図</h3>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="mobileSeamlessToggle" />
+                        20万分の1シームレス地質図を表示
+                    </label>
+                    <div id="mobileSeamlessControls" style="display: none;">
+                        <div class="slider-container">
+                            <label>透明度: <span id="mobileSeamlessOpacityValue">70</span>%</label>
+                            <input type="range" id="mobileSeamlessOpacity" min="0" max="100" value="70" />
+                        </div>
+                        <button id="mobileSeamlessLegendBtn" class="seamless-legend-btn">
+                            📋 凡例を表示
+                        </button>
+                    </div>
+                </div>
+                <!-- 凡例パネル -->
+                <div id="mobileLegendPanel" class="mobile-panel">
+                    <div id="mobileLegendContent">
+                        <p class="placeholder-text">地質図を選択すると凡例が表示されます。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- モバイル用オーバーレイ -->
+        <div id="mobileOverlay" class="mobile-overlay"></div>
 
         <!-- 右サイドバー開閉ボタン -->
         <button id="legendSidebarToggle" class="legend-sidebar-toggle" title="凡例パネルを開く">

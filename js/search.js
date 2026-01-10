@@ -7,6 +7,7 @@ import { getMap, getActiveLayers, setSearchResults } from './state.js';
 import { boundsIntersect } from './utils.js';
 import { toggleMapLayer } from './layers.js';
 import { showBoundsPreview, hideBoundsPreview } from './mapCore.js';
+import { updateMobileSearchResults, isMobile } from './mobile.js';
 
 /**
  * 表示範囲内の地質図を検索
@@ -34,17 +35,22 @@ export async function searchGeologicalMaps() {
 
         const results = await fetchGeologicalMaps(bbox);
         setSearchResults(results);
+        window._searchResults = results;
 
         if (results.length === 0) {
             resultContainer.innerHTML = '<p class="placeholder-text">この範囲には地質図が見つかりませんでした。</p>';
             resultCount.textContent = '(0件)';
             statusText.textContent = '地質図が見つかりませんでした';
             statusText.className = 'status-text';
+            // モバイル用も更新
+            updateMobileSearchResults('<p class="placeholder-text">この範囲には地質図が見つかりませんでした。</p>', 0);
         } else {
             renderSearchResults(results);
             resultCount.textContent = `(${results.length}件)`;
             statusText.textContent = `${results.length}件の地質図が見つかりました`;
             statusText.className = 'status-text success';
+            // モバイル用も更新
+            renderMobileSearchResults(results);
         }
     } catch (error) {
         console.error('検索エラー:', error);
@@ -337,3 +343,45 @@ function createResultItem(result, index) {
 
     return item;
 }
+
+/**
+ * モバイル用検索結果を描画
+ */
+function renderMobileSearchResults(results) {
+    let html = '';
+
+    results.forEach((result) => {
+        const shortTitle = result.title.length > 50
+            ? result.title.substring(0, 50) + '...'
+            : result.title;
+
+        html += `
+            <div class="result-item" data-result-id="${result.id}" onclick="window.toggleMobileMapLayer('${result.id}')">
+                <div class="result-item-title">${shortTitle}</div>
+                <div class="result-item-info">
+                    範囲: ${result.bounds.south.toFixed(2)}°N - ${result.bounds.north.toFixed(2)}°N
+                </div>
+            </div>
+        `;
+    });
+
+    updateMobileSearchResults(html, results.length);
+}
+
+// モバイル用のレイヤートグル関数をグローバルに公開
+window.toggleMobileMapLayer = function(resultId) {
+    const results = getSearchResults();
+    const result = results.find(r => r.id === resultId);
+    if (result) {
+        toggleMapLayer(result);
+    }
+};
+
+// 検索結果を取得する関数を追加
+function getSearchResults() {
+    return window._searchResults || [];
+}
+
+// setSearchResultsをラップして検索結果を保持
+const originalSetSearchResults = setSearchResults;
+window._searchResults = [];

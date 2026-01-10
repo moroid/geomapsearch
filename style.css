@@ -1037,22 +1037,257 @@ body {
     -webkit-user-drag: none;
 }
 
+/* ===========================================
+   モバイル用スタイル
+   =========================================== */
+
+/* モバイルヘッダー */
+.mobile-header {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #2c5f2d, #3a7d3a);
+    color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-header h1 {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.mobile-menu-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* モバイル用フローティング検索ボタン */
+.mobile-search-btn {
+    display: none;
+    position: fixed;
+    bottom: 140px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #2c5f2d, #3a7d3a);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(44, 95, 45, 0.4);
+    z-index: 1050;
+    gap: 8px;
+    align-items: center;
+}
+
+.mobile-search-btn i {
+    font-size: 0.9rem;
+}
+
+/* モバイル用ボトムナビゲーション */
+.mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: white;
+    border-top: 1px solid #e0e0e0;
+    z-index: 1100;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 8px;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.mobile-nav-item i {
+    font-size: 1.2rem;
+}
+
+.mobile-nav-item.active {
+    color: #2c5f2d;
+}
+
+.mobile-nav-item span {
+    font-weight: 500;
+}
+
+/* モバイル用ボトムシート */
+.mobile-bottom-sheet {
+    display: none;
+    position: fixed;
+    bottom: 60px;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 1090;
+    max-height: 50vh;
+    transform: translateY(calc(100% - 60px));
+    transition: transform 0.3s ease;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.mobile-bottom-sheet.expanded {
+    transform: translateY(0);
+}
+
+.mobile-bottom-sheet.minimized {
+    transform: translateY(calc(100% - 20px));
+}
+
+.bottom-sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+    margin: 10px auto;
+    cursor: grab;
+}
+
+.bottom-sheet-content {
+    padding: 0 16px 16px;
+    overflow-y: auto;
+    max-height: calc(50vh - 30px);
+}
+
+/* モバイルパネル */
+.mobile-panel {
+    display: none;
+}
+
+.mobile-panel.active {
+    display: block;
+}
+
+.mobile-panel h3 {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.mobile-panel h3 span {
+    font-weight: normal;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.mobile-result-list,
+.mobile-layer-list {
+    max-height: calc(50vh - 100px);
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+/* モバイル用オーバーレイ */
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1080;
+}
+
+.mobile-overlay.active {
+    display: block;
+}
+
 /* レスポンシブ */
 @media (max-width: 768px) {
+    /* モバイル要素を表示 */
+    .mobile-header {
+        display: flex;
+    }
+
+    .mobile-search-btn {
+        display: flex;
+    }
+
+    .mobile-nav {
+        display: flex;
+    }
+
+    .mobile-bottom-sheet {
+        display: block;
+    }
+
     #app {
         flex-direction: column;
     }
 
+    /* デスクトップ用サイドバーを非表示 */
     #sidebar {
+        display: none;
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        bottom: 0;
         width: 100%;
         height: auto;
-        max-height: 40vh;
-        order: 2;
+        max-height: calc(100vh - 56px);
+        z-index: 1200;
+        background: white;
+    }
+
+    #sidebar.mobile-open {
+        display: flex;
+    }
+
+    #sidebar h1 {
+        display: none;
     }
 
     #map {
-        height: 60vh;
-        order: 1;
+        position: fixed;
+        top: 56px;
+        left: 0;
+        right: 0;
+        bottom: 60px;
+        height: auto;
     }
 
     .result-list,
@@ -1066,6 +1301,114 @@ body {
         right: 0;
         width: 100%;
         height: 100%;
+        max-width: 100%;
         z-index: 2000;
+    }
+
+    .legend-sidebar-toggle {
+        display: none;
+    }
+
+    /* 凡例リサイズハンドルをモバイルで非表示 */
+    .legend-resize-handle {
+        display: none;
+    }
+
+    /* ズームコントロールのスタイル調整 */
+    .legend-zoom-controls {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .legend-zoom-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* タッチ操作用にボタンを大きく */
+    .layer-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
+    }
+
+    .primary-btn {
+        padding: 14px 20px;
+        font-size: 1.05rem;
+    }
+
+    /* チェックボックスを大きく */
+    .checkbox-label input[type="checkbox"] {
+        width: 22px;
+        height: 22px;
+    }
+
+    /* スライダーのつまみを大きく */
+    .slider-container input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+    }
+
+    .slider-container input[type="range"]::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* 結果アイテムのパディングを増やす */
+    .result-item {
+        padding: 14px 16px;
+    }
+
+    .result-accordion-header {
+        padding: 12px 14px;
+    }
+
+    /* レイヤーアイテムのパディングを増やす */
+    .layer-item {
+        padding: 12px 16px;
+    }
+}
+
+/* 小さいスマホ用 */
+@media (max-width: 375px) {
+    .mobile-header h1 {
+        font-size: 1rem;
+    }
+
+    .mobile-search-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+
+    .mobile-nav-item {
+        font-size: 0.65rem;
+    }
+
+    .mobile-nav-item i {
+        font-size: 1.1rem;
+    }
+}
+
+/* 横向きモバイル対応 */
+@media (max-width: 768px) and (orientation: landscape) {
+    .mobile-bottom-sheet {
+        max-height: 40vh;
+    }
+
+    .bottom-sheet-content {
+        max-height: calc(40vh - 30px);
+    }
+
+    #map {
+        bottom: 50px;
+    }
+
+    .mobile-nav {
+        height: 50px;
+    }
+
+    .mobile-search-btn {
+        bottom: 110px;
     }
 }

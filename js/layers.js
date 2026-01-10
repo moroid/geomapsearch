@@ -11,6 +11,7 @@ import {
     getCurrentLegendLayerId
 } from './state.js';
 import { showLegend, closeLegendSidebar } from './legend.js';
+import { updateMobileLayersList } from './mobile.js';
 
 /**
  * 地質図レイヤーの表示/非表示を切り替え
@@ -240,6 +241,86 @@ export function updateActiveLayersList() {
 
         container.appendChild(item);
     });
+
+    // モバイル用も更新
+    updateMobileActiveLayersList();
+}
+
+/**
+ * モバイル用表示中レイヤーリストを更新
+ */
+function updateMobileActiveLayersList() {
+    const map = getMap();
+    const activeLayers = getActiveLayers();
+
+    if (activeLayers.size === 0) {
+        updateMobileLayersList('<p class="placeholder-text">地質図が選択されていません。</p>', 0);
+        return;
+    }
+
+    let html = '';
+
+    activeLayers.forEach((layerInfo, layerId) => {
+        const shortTitle = layerInfo.data.title.length > 40
+            ? layerInfo.data.title.substring(0, 40) + '...'
+            : layerInfo.data.title;
+
+        html += `
+            <div class="layer-item">
+                <div class="layer-item-header">
+                    <span class="layer-item-title">${shortTitle}</span>
+                    <div class="layer-item-controls">
+                        <button class="layer-btn legend-btn" title="凡例を表示" onclick="window.showMobileLegend('${layerId}')">📋</button>
+                        <button class="layer-btn zoom-btn" title="ズーム" onclick="window.zoomToMobileLayer('${layerId}')">📍</button>
+                        <button class="layer-btn remove-btn" title="削除" onclick="window.removeMobileLayer('${layerId}')">✕</button>
+                    </div>
+                </div>
+                <div class="layer-item-opacity">
+                    <span>透明度:</span>
+                    <input type="range" min="0" max="100" value="${Math.round(layerInfo.layer.options.opacity * 100)}"
+                           oninput="window.setMobileLayerOpacity('${layerId}', this.value)" />
+                    <span class="opacity-value">${Math.round(layerInfo.layer.options.opacity * 100)}%</span>
+                </div>
+            </div>
+        `;
+    });
+
+    updateMobileLayersList(html, activeLayers.size);
+}
+
+// モバイル用グローバル関数
+window.showMobileLegend = function(layerId) {
+    const activeLayers = getActiveLayers();
+    const layerInfo = activeLayers.get(layerId);
+    if (layerInfo) {
+        showLegend(layerId, layerInfo.data);
+    }
+};
+
+window.zoomToMobileLayer = function(layerId) {
+    const map = getMap();
+    const activeLayers = getActiveLayers();
+    const layerInfo = activeLayers.get(layerId);
+    if (layerInfo && layerInfo.data.bounds) {
+        const bounds = layerInfo.data.bounds;
+        map.fitBounds([
+            [bounds.south, bounds.west],
+            [bounds.north, bounds.east]
+        ]);
+    }
+};
+
+window.removeMobileLayer = function(layerId) {
+    removeLayer(layerId);
+    updateSearchResultsSelection();
+};
+
+window.setMobileLayerOpacity = function(layerId, value) {
+    const activeLayers = getActiveLayers();
+    const layerInfo = activeLayers.get(layerId);
+    if (layerInfo) {
+        layerInfo.layer.setOpacity(value / 100);
+    }
 }
 
 /**

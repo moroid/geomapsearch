@@ -69,7 +69,7 @@ export async function showLegend(layerId, mapData) {
         // PDF説明書へのリンク
         if (mapData.pdfUrl) {
             legendHtml += `
-                <a href="${mapData.pdfUrl}" target="_blank" class="legend-link">
+                <a href="${mapData.pdfUrl}" target="_blank" rel="noopener noreferrer" class="legend-link">
                     📄 説明書（PDF）を開く
                 </a>
             `;
@@ -78,7 +78,7 @@ export async function showLegend(layerId, mapData) {
         // GeoTIFFダウンロードリンク
         if (mapData.geotiffUrl) {
             legendHtml += `
-                <a href="${mapData.geotiffUrl}" target="_blank" class="legend-link" download>
+                <a href="${mapData.geotiffUrl}" target="_blank" rel="noopener noreferrer" class="legend-link" download>
                     🗺️ GeoTIFFをダウンロード
                 </a>
             `;
@@ -86,7 +86,7 @@ export async function showLegend(layerId, mapData) {
 
         // CKANページへのリンク
         legendHtml += `
-            <a href="https://data.gsj.jp/gkan/dataset/${mapData.name}" target="_blank" class="legend-link">
+            <a href="https://data.gsj.jp/gkan/dataset/${mapData.name}" target="_blank" rel="noopener noreferrer" class="legend-link">
                 🔗 詳細ページを開く（CKAN）
             </a>
         `;
@@ -129,7 +129,7 @@ export async function showLegend(layerId, mapData) {
                 <div class="legend-section">
                     <p class="placeholder-text">この地質図の凡例データは利用できません。</p>
                 </div>
-                <a href="https://data.gsj.jp/gkan/dataset/${mapData.name}" target="_blank" class="legend-link">
+                <a href="https://data.gsj.jp/gkan/dataset/${mapData.name}" target="_blank" rel="noopener noreferrer" class="legend-link">
                     🔗 詳細ページを開く（CKAN）
                 </a>
             `;
@@ -143,7 +143,7 @@ export async function showLegend(layerId, mapData) {
             <div class="legend-error">
                 凡例の読み込みに失敗しました。
             </div>
-            <a href="https://data.gsj.jp/gkan/dataset/${mapData.name}" target="_blank" class="legend-link">
+            <a href="https://data.gsj.jp/gkan/dataset/${mapData.name}" target="_blank" rel="noopener noreferrer" class="legend-link">
                 🔗 詳細ページを開く（CKAN）
             </a>
         `;
@@ -236,7 +236,7 @@ export async function showSeamlessLegend() {
         }
 
         legendHtml += `
-            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3/legend.html" target="_blank" class="legend-link">
+            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3/legend.html" target="_blank" rel="noopener noreferrer" class="legend-link">
                 🔗 完全な凡例を開く
             </a>
         `;
@@ -249,7 +249,7 @@ export async function showSeamlessLegend() {
             <div class="legend-error">
                 凡例の読み込みに失敗しました。
             </div>
-            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3/legend.html" target="_blank" class="legend-link">
+            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3/legend.html" target="_blank" rel="noopener noreferrer" class="legend-link">
                 🔗 凡例ページを開く
             </a>
         `;
