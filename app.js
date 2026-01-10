@@ -96,6 +96,14 @@ function initMap() {
     };
 
     L.control.layers(baseMaps).addTo(map);
+
+    // スケールバーを追加
+    L.control.scale({
+        metric: true,           // メートル単位を表示
+        imperial: false,        // マイル単位は非表示（日本向け）
+        position: 'bottomleft', // 左下に配置
+        maxWidth: 150           // 最大幅
+    }).addTo(map);
 }
 
 /**
