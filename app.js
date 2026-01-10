@@ -39,6 +39,9 @@ let legendSidebarResizing = false;
 let legendSidebarStartX = 0;
 let legendSidebarStartWidth = 0;
 
+// ホバープレビュー用矩形レイヤー
+let hoverPreviewLayer = null;
+
 // CKAN API エンドポイント
 const CKAN_API_BASE = 'https://data.gsj.jp/gkan/api/3/action';
 
@@ -478,7 +481,48 @@ function createResultItem(result, index) {
     `;
 
     item.addEventListener('click', () => toggleMapLayer(result));
+
+    // ホバー時に範囲を地図上に表示
+    item.addEventListener('mouseenter', () => showBoundsPreview(result.bounds));
+    item.addEventListener('mouseleave', () => hideBoundsPreview());
+
     return item;
+}
+
+/**
+ * 地質図の範囲をプレビュー表示
+ */
+function showBoundsPreview(bounds) {
+    // 既存のプレビューを削除
+    hideBoundsPreview();
+
+    // 矩形を作成
+    hoverPreviewLayer = L.rectangle(
+        [
+            [bounds.south, bounds.west],
+            [bounds.north, bounds.east]
+        ],
+        {
+            color: '#2c5f2d',
+            weight: 2,
+            opacity: 0.8,
+            fillColor: '#2c5f2d',
+            fillOpacity: 0.15,
+            dashArray: '5, 5'
+        }
+    );
+
+    hoverPreviewLayer.addTo(map);
+}
+
+/**
+ * 範囲プレビューを非表示
+ */
+function hideBoundsPreview() {
+    if (hoverPreviewLayer) {
+        map.removeLayer(hoverPreviewLayer);
+        hoverPreviewLayer = null;
+    }
 }
 
 /**
