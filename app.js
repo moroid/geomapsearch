@@ -269,8 +269,14 @@ async function fetchGeologicalMaps(bbox) {
                     r.format === 'JPEG' || r.format === 'JPG' || r.format === 'PNG'
                 );
                 const pdfResource = dataset.resources?.find(r => r.format === 'PDF');
+
+                // デバッグ: リソースフォーマット一覧を出力
+                console.log(`[${dataset.title}] リソースフォーマット:`, dataset.resources?.map(r => r.format));
+
                 const geotiffResource = dataset.resources?.find(r =>
-                    r.format === 'GEOTIFF' || r.format === 'GeoTIFF' || r.format === 'geotiff'
+                    r.format === 'GEOTIFF' || r.format === 'GeoTIFF' || r.format === 'geotiff' ||
+                    r.format === 'TIFF' || r.format === 'Tiff' || r.format === 'tiff' ||
+                    r.format === 'GeoTiff' || r.format === 'Geotiff'
                 );
 
                 mapsWithTiles.push({
