@@ -46,8 +46,8 @@ let hoverPreviewLayer = null;
 const CKAN_API_BASE = 'https://data.gsj.jp/gkan/api/3/action';
 
 // シームレス地質図関連URL
-const SEAMLESS_TILE_URL = 'https://gbank.gsj.jp/seamless/v2/api/1.3.1/tiles/{z}/{y}/{x}.png';
-const SEAMLESS_LEGEND_URL = 'https://gbank.gsj.jp/seamless/v2/api/1.3.1/legend.json';
+const SEAMLESS_TILE_URL = 'https://gbank.gsj.jp/seamless/v2/api/1.3/tiles/{z}/{y}/{x}.png';
+const SEAMLESS_LEGEND_URL = 'https://gbank.gsj.jp/seamless/v2/api/1.3/legend.json';
 
 /**
  * 初期化
@@ -74,24 +74,28 @@ function initMap() {
         prefix: false
     }).addTo(map);
 
-    // ベースマップ（OpenStreetMap）
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // 地質図オーバーレイ用のカスタムペインを作成（ベースマップより上に表示）
+    map.createPane('geologicalOverlay');
+    map.getPane('geologicalOverlay').style.zIndex = 450;  // tilePane(200)より上、markerPane(600)より下
+
+    // ベースマップ（OpenStreetMap）- デフォルトで表示
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 18
-    }).addTo(map);
+    });
 
-    // 地理院タイル（淡色地図）も追加可能
+    // 地理院タイル（淡色地図）
     const gsiPale = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
         attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
         maxZoom: 18
     });
 
+    // デフォルトのベースマップを追加
+    osmLayer.addTo(map);
+
     // レイヤーコントロール
     const baseMaps = {
-        'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 18
-        }).addTo(map),
+        'OpenStreetMap': osmLayer,
         '地理院タイル（淡色）': gsiPale
     };
 
@@ -647,6 +651,7 @@ async function addLayer(mapData) {
 
         // Leafletタイルレイヤーを作成
         // maxNativeZoomを設定し、それ以上のズームではバイリニア補間で拡大表示
+        // paneを指定して、ベースマップ切り替え時も地質図が上に表示されるようにする
         const layer = L.tileLayer(tileUrl, {
             minZoom: minZoom,
             maxZoom: 18,  // 表示可能な最大ズーム
@@ -656,7 +661,8 @@ async function addLayer(mapData) {
                 [bounds.south, bounds.west],
                 [bounds.north, bounds.east]
             ) : undefined,
-            attribution: '<a href="https://gbank.gsj.jp/geonavi/">産総研 地質図Navi</a>'
+            attribution: '<a href="https://gbank.gsj.jp/geonavi/">産総研 地質図Navi</a>',
+            pane: 'geologicalOverlay'
         });
 
         layer.addTo(map);
@@ -838,12 +844,14 @@ function toggleSeamlessLayer(e) {
     if (e.target.checked) {
         // シームレス地質図を追加
         // maxNativeZoomを設定し、それ以上のズームではバイリニア補間で拡大表示
+        // paneを指定して、ベースマップ切り替え時もシームレス地質図が上に表示されるようにする
         seamlessLayer = L.tileLayer(SEAMLESS_TILE_URL, {
             minZoom: 0,
             maxZoom: 18,  // 表示可能な最大ズーム
             maxNativeZoom: 13,  // タイルが存在する最大ズーム
             opacity: 0.7,
-            attribution: '<a href="https://gbank.gsj.jp/seamless/">20万分の1日本シームレス地質図</a>'
+            attribution: '<a href="https://gbank.gsj.jp/seamless/">20万分の1日本シームレス地質図</a>',
+            pane: 'geologicalOverlay'
         });
         seamlessLayer.addTo(map);
         seamlessControls.style.display = 'block';
@@ -1097,7 +1105,7 @@ async function showSeamlessLegend() {
         }
 
         legendHtml += `
-            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3.1/legend.html" target="_blank" class="legend-link">
+            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3/legend.html" target="_blank" class="legend-link">
                 🔗 完全な凡例を開く
             </a>
         `;
@@ -1110,7 +1118,7 @@ async function showSeamlessLegend() {
             <div class="legend-error">
                 凡例の読み込みに失敗しました。
             </div>
-            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3.1/legend.html" target="_blank" class="legend-link">
+            <a href="https://gbank.gsj.jp/seamless/v2/api/1.3/legend.html" target="_blank" class="legend-link">
                 🔗 凡例ページを開く
             </a>
         `;
