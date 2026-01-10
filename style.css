@@ -402,6 +402,27 @@ body {
     border-color: #81c784;
 }
 
+/* シームレス凡例更新ボタン */
+.seamless-legend-refresh-btn {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    background: #e8f5e9;
+    color: #2c5f2d;
+    border: 1px solid #a5d6a7;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+}
+
+.seamless-legend-refresh-btn:hover {
+    background: #c8e6c9;
+    border-color: #81c784;
+}
+
 /* フッター */
 .footer {
     margin-top: auto;
@@ -638,6 +659,24 @@ body {
     margin-right: 10px;
 }
 
+#legendZoomResetBtn {
+    width: 36px;
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+
+.legend-zoom-btn.legend-download-btn {
+    margin-left: 10px;
+    background: #e8f5e9;
+    border-color: #a5d6a7;
+    color: #2c5f2d;
+}
+
+.legend-zoom-btn.legend-download-btn:hover {
+    background: #c8e6c9;
+    border-color: #81c784;
+}
+
 #legendZoomLevel {
     min-width: 45px;
     text-align: center;
@@ -721,6 +760,48 @@ body {
     padding: 8px 0;
     border-bottom: 1px solid #e0e0e0;
     margin-bottom: 8px;
+}
+
+/* 引用情報行 */
+.legend-citation-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.legend-citation-text {
+    flex: 1;
+    font-size: 0.8rem;
+    color: #333;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.legend-copy-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.legend-copy-btn:hover {
+    background: #e0e0e0;
+    border-color: #999;
+}
+
+.legend-copy-btn.copied {
+    background: #e8f5e9;
+    border-color: #81c784;
+    color: #2c5f2d;
 }
 
 .legend-item {

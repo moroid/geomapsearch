@@ -269,6 +269,7 @@ async function fetchGeologicalMaps(bbox) {
                     name: dataset.name,
                     title: dataset.title,
                     notes: dataset.notes,
+                    author: dataset.author,
                     tileUrl: tileResource?.url,
                     tileJsonUrl: tileJsonResource?.url,
                     bounds: mapBounds,
@@ -553,6 +554,8 @@ async function addLayer(mapData) {
         let legendUrl = null;
         let mapName = null;
         let mapDescription = null;
+        let mapTitleJ = null;
+        let mapAuthorsJ = null;
 
         // TileJSONから詳細情報を取得
         if (mapData.tileJsonUrl) {
@@ -588,6 +591,10 @@ async function addLayer(mapData) {
                     // 地図名と説明を取得
                     if (tileJson.name) mapName = tileJson.name;
                     if (tileJson.description) mapDescription = tileJson.description;
+
+                    // 日本語タイトルと著者を取得
+                    if (tileJson.title_j) mapTitleJ = tileJson.title_j;
+                    if (tileJson.authors_j) mapAuthorsJ = tileJson.authors_j;
                 }
             } catch (e) {
                 console.warn('TileJSON取得エラー:', e);
@@ -625,7 +632,9 @@ async function addLayer(mapData) {
                 maxZoom,
                 legendUrl,
                 mapName,
-                mapDescription
+                mapDescription,
+                mapTitleJ,
+                mapAuthorsJ
             }
         });
 
@@ -857,55 +866,45 @@ async function showLegend(layerId, mapData) {
         // 地質図の凡例情報を構築
         let legendHtml = '';
 
-        // TileJSONの凡例画像がある場合（優先）
-        if (mapData.legendUrl) {
+        // 説明セクション（凡例より先に表示）
+        // 引用テキストを生成: title_j + authors_j
+        let citationText = '';
+        if (mapData.mapTitleJ) {
+            // マークダウン記法を除去してプレーンテキストに変換
+            citationText = stripMarkdown(mapData.mapTitleJ);
+            if (mapData.mapAuthorsJ) {
+                citationText += `　${stripMarkdown(mapData.mapAuthorsJ)}`;
+            }
+        }
+
+        // TileJSONのtitle_jがある場合
+        if (citationText) {
+            // コピー用にエスケープ処理
+            const escapedCitation = citationText.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
             legendHtml += `
                 <div class="legend-section">
-                    <div class="legend-section-title">凡例</div>
-                    <div class="legend-image-container">
-                        <img src="${mapData.legendUrl}" alt="凡例" class="legend-image clickable"
-                             data-title="${displayTitle}"
-                             onclick="openLegendImageZoom(this)"
-                             onerror="this.parentElement.innerHTML='<p class=\\'placeholder-text\\'>凡例画像を読み込めませんでした</p>'" />
-                        <p class="legend-image-hint">クリックで拡大表示</p>
+                    <div class="legend-section-title">説明</div>
+                    <div class="legend-citation-line">
+                        <p class="legend-citation-text">${escapeHtml(citationText)}</p>
+                        <button class="legend-copy-btn" onclick="copyToClipboard(\`${escapedCitation}\`, this)" title="コピー">📋</button>
                     </div>
                 </div>
             `;
         }
-
-        // TileJSONのdescriptionがある場合
-        if (mapData.mapDescription) {
-            legendHtml += `
-                <div class="legend-section">
-                    <div class="legend-section-title">説明</div>
-                    <p style="font-size: 0.8rem; color: #333; line-height: 1.5;">${mapData.mapDescription}</p>
-                </div>
-            `;
-        }
-        // CKANのnotesがある場合（TileJSONのdescriptionがなければ）
+        // フォールバック: CKANのnotesがある場合
         else if (mapData.notes) {
-            const shortNotes = mapData.notes.length > 300
+            let shortNotes = mapData.notes.length > 300
                 ? mapData.notes.substring(0, 300) + '...'
                 : mapData.notes;
+            shortNotes = stripMarkdown(shortNotes);
+            const escapedNotes = shortNotes.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
             legendHtml += `
                 <div class="legend-section">
                     <div class="legend-section-title">説明</div>
-                    <p style="font-size: 0.8rem; color: #333; line-height: 1.5;">${shortNotes}</p>
-                </div>
-            `;
-        }
-
-        // 出版物画像がある場合（凡例URLがなければ表示）
-        if (!mapData.legendUrl && mapData.imageUrl) {
-            legendHtml += `
-                <div class="legend-section">
-                    <div class="legend-section-title">地質図画像</div>
-                    <div class="legend-image-container">
-                        <img src="${mapData.imageUrl}" alt="地質図" class="legend-image clickable"
-                             data-title="${displayTitle}"
-                             onclick="openLegendImageZoom(this)"
-                             onerror="this.parentElement.innerHTML='<p class=\\'placeholder-text\\'>画像を読み込めませんでした</p>'" />
-                        <p class="legend-image-hint">クリックで拡大表示</p>
+                    <div class="legend-citation-line">
+                        <p class="legend-citation-text">${escapeHtml(shortNotes)}</p>
+                        <button class="legend-copy-btn" onclick="copyToClipboard(\`${escapedNotes}\`, this)" title="コピー">📋</button>
                     </div>
                 </div>
             `;
@@ -926,6 +925,38 @@ async function showLegend(layerId, mapData) {
                 🔗 詳細ページを開く（CKAN）
             </a>
         `;
+
+        // TileJSONの凡例画像がある場合
+        if (mapData.legendUrl) {
+            legendHtml += `
+                <div class="legend-section">
+                    <div class="legend-section-title">凡例</div>
+                    <div class="legend-image-container">
+                        <img src="${mapData.legendUrl}" alt="凡例" class="legend-image clickable"
+                             data-title="${displayTitle}"
+                             onclick="openLegendImageZoom(this)"
+                             onerror="this.parentElement.innerHTML='<p class=\\'placeholder-text\\'>凡例画像を読み込めませんでした</p>'" />
+                        <p class="legend-image-hint">クリックで拡大表示</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 出版物画像がある場合（凡例URLがなければ表示）
+        if (!mapData.legendUrl && mapData.imageUrl) {
+            legendHtml += `
+                <div class="legend-section">
+                    <div class="legend-section-title">地質図画像</div>
+                    <div class="legend-image-container">
+                        <img src="${mapData.imageUrl}" alt="地質図" class="legend-image clickable"
+                             data-title="${displayTitle}"
+                             onclick="openLegendImageZoom(this)"
+                             onerror="this.parentElement.innerHTML='<p class=\\'placeholder-text\\'>画像を読み込めませんでした</p>'" />
+                        <p class="legend-image-hint">クリックで拡大表示</p>
+                    </div>
+                </div>
+            `;
+        }
 
         // 凡例がない場合のメッセージ
         if (!mapData.legendUrl && !mapData.imageUrl && !mapData.notes && !mapData.mapDescription && !mapData.pdfUrl) {
@@ -974,21 +1005,18 @@ async function showSeamlessLegend() {
     content.innerHTML = `
         <div class="legend-loading">
             <span class="loading"></span>
-            <span>凡例を読み込み中...</span>
+            <span>表示範囲の凡例を取得中...</span>
         </div>
     `;
 
     try {
-        // キャッシュがあれば使用
-        if (!seamlessLegendData) {
-            const response = await fetch(SEAMLESS_LEGEND_URL);
-            if (!response.ok) throw new Error('凡例データの取得に失敗');
-            seamlessLegendData = await response.json();
-        }
+        // 表示範囲内の凡例を直接取得（APIのboxパラメータを使用）
+        const filteredLegendData = await getVisibleSeamlessLegend();
+        const filterMessage = `表示範囲内の凡例（${filteredLegendData.length}項目）`;
 
         // 凡例をグループ別に整理
         const groups = {};
-        seamlessLegendData.forEach(item => {
+        filteredLegendData.forEach(item => {
             const group = item.group_ja || '不明';
             if (!groups[group]) {
                 groups[group] = [];
@@ -999,46 +1027,48 @@ async function showSeamlessLegend() {
         // HTMLを構築
         let legendHtml = `
             <div class="legend-section">
-                <div class="legend-section-title">凡例一覧（${seamlessLegendData.length}項目）</div>
+                <div class="legend-section-title">${filterMessage}</div>
                 <p style="font-size: 0.75rem; color: #666; margin-bottom: 10px;">
-                    主要な岩石タイプ別に分類されています
+                    地図を移動して「凡例を更新」で表示範囲の凡例を取得できます
                 </p>
+                <button class="seamless-legend-refresh-btn" onclick="showSeamlessLegend()">
+                    🔄 凡例を更新
+                </button>
             </div>
         `;
 
-        for (const [groupName, items] of Object.entries(groups)) {
+        if (Object.keys(groups).length === 0) {
             legendHtml += `
                 <div class="legend-section">
-                    <div class="legend-section-title">${groupName}（${items.length}件）</div>
+                    <p class="placeholder-text">この範囲には地質図データがありません。</p>
+                </div>
             `;
-
-            // 各グループの最初の20項目のみ表示
-            const displayItems = items.slice(0, 20);
-            displayItems.forEach(item => {
-                const color = `#${item.value || '999999'}`;
-                const title = item.lithology_ja || item.title || 'N/A';
-                const age = item.formationAge_ja || '';
-
+        } else {
+            for (const [groupName, items] of Object.entries(groups)) {
                 legendHtml += `
-                    <div class="legend-item">
-                        <div class="legend-color" style="background-color: ${color};"></div>
-                        <div class="legend-text">
-                            <div class="legend-text-title">${title}</div>
-                            ${age ? `<div class="legend-text-desc">${age}</div>` : ''}
+                    <div class="legend-section">
+                        <div class="legend-section-title">${groupName}（${items.length}件）</div>
+                `;
+
+                // 全アイテムを表示（フィルタリング済みなので制限なし）
+                items.forEach(item => {
+                    const color = `#${item.value || '999999'}`;
+                    const title = item.lithology_ja || item.title || 'N/A';
+                    const age = item.formationAge_ja || '';
+
+                    legendHtml += `
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: ${color};"></div>
+                            <div class="legend-text">
+                                <div class="legend-text-title">${title}</div>
+                                ${age ? `<div class="legend-text-desc">${age}</div>` : ''}
+                            </div>
                         </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
 
-            if (items.length > 20) {
-                legendHtml += `
-                    <p style="font-size: 0.75rem; color: #666; text-align: center; padding: 5px;">
-                        他 ${items.length - 20} 項目...
-                    </p>
-                `;
+                legendHtml += '</div>';
             }
-
-            legendHtml += '</div>';
         }
 
         legendHtml += `
@@ -1059,6 +1089,43 @@ async function showSeamlessLegend() {
                 🔗 凡例ページを開く
             </a>
         `;
+    }
+}
+
+/**
+ * 表示範囲内のシームレス地質図凡例を直接取得
+ */
+async function getVisibleSeamlessLegend() {
+    const bounds = map.getBounds();
+
+    // 日本の範囲内かチェック（シームレス地質図は日本のみ）
+    const west = Math.max(bounds.getWest(), 122);
+    const east = Math.min(bounds.getEast(), 154);
+    const south = Math.max(bounds.getSouth(), 20);
+    const north = Math.min(bounds.getNorth(), 46);
+
+    // 範囲が日本外の場合は空を返す
+    if (west >= east || south >= north) {
+        return [];
+    }
+
+    try {
+        // box パラメータで範囲指定して凡例を取得
+        // box=緯度1,経度1,緯度2,経度2 (南西と北東の座標)
+        const url = `${SEAMLESS_LEGEND_URL}?box=${south},${west},${north},${east}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            console.warn('凡例取得失敗:', response.status);
+            return [];
+        }
+
+        const data = await response.json();
+        console.log(`表示範囲内の凡例: ${data.length}項目`);
+        return data;
+    } catch (error) {
+        console.warn('凡例取得エラー:', error);
+        return [];
     }
 }
 
@@ -1262,6 +1329,46 @@ function initLegendZoomControls() {
     document.getElementById('legendZoomOutBtn').addEventListener('click', () => zoomLegendImage(-0.25));
     document.getElementById('legendZoomResetBtn').addEventListener('click', resetLegendImageZoom);
     document.getElementById('legendZoomFitBtn').addEventListener('click', fitLegendImage);
+    document.getElementById('legendDownloadBtn').addEventListener('click', downloadLegendImage);
+}
+
+/**
+ * 凡例画像をダウンロード
+ */
+function downloadLegendImage() {
+    if (!currentLegendImage) {
+        console.warn('ダウンロードする画像がありません');
+        return;
+    }
+
+    // 画像をfetchしてBlobとしてダウンロード（CORS対策）
+    fetch(currentLegendImage)
+        .then(response => {
+            if (!response.ok) throw new Error('画像の取得に失敗');
+            return response.blob();
+        })
+        .then(blob => {
+            // ダウンロードリンクを作成
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // ファイル名を生成（URLから抽出または凡例タイトルを使用）
+            const titleEl = document.getElementById('legendTitle');
+            const title = titleEl ? titleEl.textContent.replace(/[\\/:*?"<>|]/g, '_') : 'legend';
+            const ext = currentLegendImage.match(/\.(png|jpg|jpeg|gif|webp)/i)?.[1] || 'png';
+            a.download = `${title}_凡例.${ext}`;
+
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('ダウンロードエラー:', error);
+            // フォールバック: 新しいタブで開く
+            window.open(currentLegendImage, '_blank');
+        });
 }
 
 /**
@@ -1504,6 +1611,79 @@ function exitLegendImageZoom() {
     }
 
     currentLegendImage = null;
+}
+
+/**
+ * マークダウン記法を除去してプレーンテキストに変換
+ */
+function stripMarkdown(text) {
+    if (!text) return '';
+    return text
+        // **ラベル**: 形式を除去（名称:, 著者: など）
+        .replace(/\*\*[^*]+\*\*:\s*/g, '')
+        // **太字** を内容のみに
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        // *斜体* を内容のみに
+        .replace(/\*([^*]+)\*/g, '$1')
+        // [リンクテキスト](URL) を除去
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '')
+        // (URL) 形式を除去
+        .replace(/\(https?:\/\/[^)]+\)/g, '')
+        // 残りのURL（https://...）を除去
+        .replace(/https?:\/\/[^\s]+/g, '')
+        // 見出し # を除去
+        .replace(/^#{1,6}\s+/gm, '')
+        // インラインコード ` を除去
+        .replace(/`([^`]+)`/g, '$1')
+        // 連続するスペースを1つに
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/**
+ * HTMLエスケープ
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+/**
+ * テキストをクリップボードにコピー
+ */
+function copyToClipboard(text, buttonEl) {
+    navigator.clipboard.writeText(text).then(() => {
+        // コピー成功のフィードバック
+        const originalText = buttonEl.textContent;
+        buttonEl.textContent = '✓';
+        buttonEl.classList.add('copied');
+        setTimeout(() => {
+            buttonEl.textContent = originalText;
+            buttonEl.classList.remove('copied');
+        }, 1500);
+    }).catch(err => {
+        console.error('コピーに失敗:', err);
+        // フォールバック: execCommand
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        const originalText = buttonEl.textContent;
+        buttonEl.textContent = '✓';
+        buttonEl.classList.add('copied');
+        setTimeout(() => {
+            buttonEl.textContent = originalText;
+            buttonEl.classList.remove('copied');
+        }, 1500);
+    });
 }
 
 // DOMContentLoaded時に初期化
