@@ -436,6 +436,7 @@ export function toggleMacrostratLayer(e) {
     const map = getMap();
     const macrostratControls = document.getElementById('macrostratControls');
     const mobileMacrostratControls = document.getElementById('mobileMacrostratControls');
+    const currentLegendLayerId = getCurrentLegendLayerId();
 
     if (e.target.checked) {
         const macrostratLayer = L.tileLayer(MACROSTRAT_TILE_URL, {
@@ -461,6 +462,9 @@ export function toggleMacrostratLayer(e) {
         }
         if (macrostratControls) macrostratControls.style.display = 'none';
         if (mobileMacrostratControls) mobileMacrostratControls.style.display = 'none';
+        if (currentLegendLayerId === 'macrostrat') {
+            closeLegendSidebar();
+        }
 
         // 両方のチェックボックスを同期
         syncMacrostratToggle(false);

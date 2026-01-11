@@ -11,6 +11,7 @@ export const SEAMLESS_LEGEND_URL = 'https://gbank.gsj.jp/seamless/v2/api/1.3/leg
 
 // Macrostrat（世界の地質図）
 export const MACROSTRAT_TILE_URL = 'https://tiles.macrostrat.org/carto/{z}/{x}/{y}.png';
+export const MACROSTRAT_API_URL = 'https://macrostrat.org/api/v2/geologic_units/map';
 
 // Macrostrat スケール別タイル
 export const MACROSTRAT_SCALES = {
