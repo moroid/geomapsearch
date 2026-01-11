@@ -366,13 +366,29 @@ export function initImageViewer() {
     const viewer = document.getElementById('imageViewer');
     const content = document.getElementById('imageViewerContent');
 
+    // 要素が存在しない場合はスキップ
+    if (!viewer || !content) return;
+
     // 閉じるボタン
-    document.getElementById('closeViewerBtn').addEventListener('click', closeImageViewer);
+    const closeViewerBtn = document.getElementById('closeViewerBtn');
+    if (closeViewerBtn) {
+        closeViewerBtn.addEventListener('click', closeImageViewer);
+    }
 
     // ズームボタン
-    document.getElementById('zoomInBtn').addEventListener('click', () => zoomImage(0.25));
-    document.getElementById('zoomOutBtn').addEventListener('click', () => zoomImage(-0.25));
-    document.getElementById('zoomResetBtn').addEventListener('click', resetImageZoom);
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+
+    if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', () => zoomImage(0.25));
+    }
+    if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', () => zoomImage(-0.25));
+    }
+    if (zoomResetBtn) {
+        zoomResetBtn.addEventListener('click', resetImageZoom);
+    }
 
     // マウスホイールでズーム
     content.addEventListener('wheel', (e) => {

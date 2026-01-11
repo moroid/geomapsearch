@@ -5,7 +5,6 @@
  */
 
 import { getMap } from './state.js';
-import { searchGeologicalMaps } from './search.js';
 import { toggleSeamlessLayer, updateSeamlessOpacity } from './layers.js';
 import { showSeamlessLegend, openLegendSidebar } from './legend.js';
 
@@ -29,10 +28,9 @@ export function isMobile() {
  * モバイルUIの初期化
  */
 export function initMobileUI() {
-    if (!isMobile()) return;
-
-    initMobileNavigation();
+    // イベントリスナーは常に設定（要素が存在する場合のみ動作）
     initMobileSearchButton();
+    initMobileNavigation();
     initMobileMenuButton();
     initBottomSheet();
     initMobileSeamlessControls();
@@ -41,13 +39,15 @@ export function initMobileUI() {
     // ウィンドウリサイズ時の処理
     window.addEventListener('resize', handleResize);
 
-    // 地図のサイズ調整
-    setTimeout(() => {
-        const map = getMap();
-        if (map) {
-            map.invalidateSize();
-        }
-    }, 100);
+    // モバイルの場合は地図のサイズ調整
+    if (isMobile()) {
+        setTimeout(() => {
+            const map = getMap();
+            if (map) {
+                map.invalidateSize();
+            }
+        }, 100);
+    }
 }
 
 /**
@@ -117,7 +117,10 @@ function initMobileSearchButton() {
     const mobileSearchBtn = document.getElementById('mobileSearchBtn');
     if (mobileSearchBtn) {
         mobileSearchBtn.addEventListener('click', () => {
-            searchGeologicalMaps();
+            // window経由で呼び出し（循環参照を回避）
+            if (window.searchGeologicalMaps) {
+                window.searchGeologicalMaps();
+            }
             // 検索後にボトムシートを展開して検索パネルを表示
             switchPanel('search');
             expandBottomSheet();

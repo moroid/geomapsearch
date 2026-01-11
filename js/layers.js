@@ -278,7 +278,7 @@ function updateMobileActiveLayersList() {
                 <div class="layer-item-opacity">
                     <span>透明度:</span>
                     <input type="range" min="0" max="100" value="${Math.round(layerInfo.layer.options.opacity * 100)}"
-                           oninput="window.setMobileLayerOpacity('${layerId}', this.value)" />
+                           oninput="window.setMobileLayerOpacity('${layerId}', this.value, this)" />
                     <span class="opacity-value">${Math.round(layerInfo.layer.options.opacity * 100)}%</span>
                 </div>
             </div>
@@ -315,11 +315,18 @@ window.removeMobileLayer = function(layerId) {
     updateSearchResultsSelection();
 };
 
-window.setMobileLayerOpacity = function(layerId, value) {
+window.setMobileLayerOpacity = function(layerId, value, inputElement) {
     const activeLayers = getActiveLayers();
     const layerInfo = activeLayers.get(layerId);
     if (layerInfo) {
         layerInfo.layer.setOpacity(value / 100);
+        // 透明度値の表示を更新
+        if (inputElement) {
+            const valueSpan = inputElement.parentElement.querySelector('.opacity-value');
+            if (valueSpan) {
+                valueSpan.textContent = `${value}%`;
+            }
+        }
     }
 }
 

@@ -15,14 +15,27 @@ import { updateMobileSearchResults, isMobile } from './mobile.js';
 export async function searchGeologicalMaps() {
     const map = getMap();
     const searchBtn = document.getElementById('searchBtn');
+    const mobileSearchBtn = document.getElementById('mobileSearchBtn');
     const statusText = document.getElementById('searchStatus');
     const resultContainer = document.getElementById('searchResults');
     const resultCount = document.getElementById('resultCount');
 
-    searchBtn.disabled = true;
-    searchBtn.innerHTML = '<span class="loading"></span> 検索中...';
-    statusText.textContent = '';
-    statusText.className = 'status-text';
+    // デスクトップ検索ボタンの状態更新
+    if (searchBtn) {
+        searchBtn.disabled = true;
+        searchBtn.innerHTML = '<span class="loading"></span> 検索中...';
+    }
+
+    // モバイル検索ボタンの状態更新
+    if (mobileSearchBtn) {
+        mobileSearchBtn.disabled = true;
+        mobileSearchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>検索中...</span>';
+    }
+
+    if (statusText) {
+        statusText.textContent = '';
+        statusText.className = 'status-text';
+    }
 
     try {
         const bounds = map.getBounds();
@@ -38,28 +51,52 @@ export async function searchGeologicalMaps() {
         window._searchResults = results;
 
         if (results.length === 0) {
-            resultContainer.innerHTML = '<p class="placeholder-text">この範囲には地質図が見つかりませんでした。</p>';
-            resultCount.textContent = '(0件)';
-            statusText.textContent = '地質図が見つかりませんでした';
-            statusText.className = 'status-text';
+            if (resultContainer) {
+                resultContainer.innerHTML = '<p class="placeholder-text">この範囲には地質図が見つかりませんでした。</p>';
+            }
+            if (resultCount) {
+                resultCount.textContent = '(0件)';
+            }
+            if (statusText) {
+                statusText.textContent = '地質図が見つかりませんでした';
+                statusText.className = 'status-text';
+            }
             // モバイル用も更新
             updateMobileSearchResults('<p class="placeholder-text">この範囲には地質図が見つかりませんでした。</p>', 0);
         } else {
             renderSearchResults(results);
-            resultCount.textContent = `(${results.length}件)`;
-            statusText.textContent = `${results.length}件の地質図が見つかりました`;
-            statusText.className = 'status-text success';
+            if (resultCount) {
+                resultCount.textContent = `(${results.length}件)`;
+            }
+            if (statusText) {
+                statusText.textContent = `${results.length}件の地質図が見つかりました`;
+                statusText.className = 'status-text success';
+            }
             // モバイル用も更新
             renderMobileSearchResults(results);
         }
     } catch (error) {
         console.error('検索エラー:', error);
-        resultContainer.innerHTML = '<p class="placeholder-text">検索中にエラーが発生しました。</p>';
-        statusText.textContent = 'エラー: ' + error.message;
-        statusText.className = 'status-text error';
+        if (resultContainer) {
+            resultContainer.innerHTML = '<p class="placeholder-text">検索中にエラーが発生しました。</p>';
+        }
+        if (statusText) {
+            statusText.textContent = 'エラー: ' + error.message;
+            statusText.className = 'status-text error';
+        }
+        // モバイル用エラー表示
+        updateMobileSearchResults('<p class="placeholder-text">検索中にエラーが発生しました。</p>', 0);
     } finally {
-        searchBtn.disabled = false;
-        searchBtn.innerHTML = '<span class="btn-icon">🔍</span> 表示範囲で検索';
+        // デスクトップ検索ボタンのリセット
+        if (searchBtn) {
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<span class="btn-icon">🔍</span> 表示範囲で検索';
+        }
+        // モバイル検索ボタンのリセット
+        if (mobileSearchBtn) {
+            mobileSearchBtn.disabled = false;
+            mobileSearchBtn.innerHTML = '<i class="fas fa-search"></i><span>この範囲で検索</span>';
+        }
     }
 }
 
@@ -227,6 +264,8 @@ function categorizeResults(results) {
  */
 function renderSearchResults(results) {
     const container = document.getElementById('searchResults');
+    if (!container) return;
+
     container.innerHTML = '';
 
     const categories = categorizeResults(results);
