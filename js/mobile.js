@@ -16,6 +16,7 @@ let activePanel = 'search';
 
 // ボトムシートの状態
 let bottomSheetMinimized = false;
+let currentSheetHeight = 45; // vh単位
 
 /**
  * モバイルかどうかを判定
@@ -132,35 +133,78 @@ function initMobileSearchButton() {
 function initBottomSheet() {
     const bottomSheet = document.getElementById('mobileBottomSheet');
     const handle = bottomSheet?.querySelector('.bottom-sheet-handle');
+    const content = bottomSheet?.querySelector('.bottom-sheet-content');
+    const searchBtn = document.getElementById('mobileSearchBtn');
 
     if (!bottomSheet || !handle) return;
 
     let startY = 0;
+    let startHeight = 0;
+    let isDragging = false;
+
+    const updateSearchBtnPosition = (height) => {
+        if (searchBtn) {
+            const navHeight = 56;
+            searchBtn.style.bottom = `calc(${navHeight}px + ${height}vh + 10px)`;
+        }
+    };
 
     // タッチ操作でのドラッグ
     handle.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY;
-    });
+        startHeight = currentSheetHeight;
+        isDragging = true;
+        bottomSheet.style.transition = 'none';
+    }, { passive: true });
 
-    handle.addEventListener('touchend', (e) => {
-        const currentY = e.changedTouches[0].clientY;
-        const diff = currentY - startY;
+    handle.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
 
-        if (diff > 30) {
-            // 下にスワイプ -> 最小化
+        const currentY = e.touches[0].clientY;
+        const diffPx = startY - currentY;
+        const diffVh = (diffPx / window.innerHeight) * 100;
+
+        // 高さを計算（5vh〜70vhの範囲）
+        let newHeight = Math.max(5, Math.min(70, startHeight + diffVh));
+        currentSheetHeight = newHeight;
+
+        bottomSheet.style.maxHeight = `${newHeight}vh`;
+        if (content) {
+            content.style.maxHeight = `calc(${newHeight}vh - 24px)`;
+        }
+        updateSearchBtnPosition(newHeight);
+    }, { passive: true });
+
+    handle.addEventListener('touchend', () => {
+        isDragging = false;
+        bottomSheet.style.transition = 'max-height 0.3s ease';
+
+        // 小さすぎたら最小化、大きすぎたら制限
+        if (currentSheetHeight < 10) {
             minimizeBottomSheet();
-        } else if (diff < -30) {
-            // 上にスワイプ -> 表示
-            showBottomSheet();
+        } else {
+            bottomSheetMinimized = false;
+            bottomSheet.classList.remove('minimized');
         }
     });
 
     // タップで表示/最小化切り替え
-    handle.addEventListener('click', () => {
-        if (bottomSheetMinimized) {
-            showBottomSheet();
-        } else {
-            minimizeBottomSheet();
+    let tapStartTime = 0;
+    handle.addEventListener('touchstart', () => {
+        tapStartTime = Date.now();
+    }, { passive: true });
+
+    handle.addEventListener('touchend', (e) => {
+        const tapDuration = Date.now() - tapStartTime;
+        const moved = Math.abs(startY - e.changedTouches[0].clientY) > 10;
+
+        // 短いタップでドラッグしていない場合のみトグル
+        if (tapDuration < 200 && !moved) {
+            if (bottomSheetMinimized) {
+                showBottomSheet();
+            } else {
+                minimizeBottomSheet();
+            }
         }
     });
 }
@@ -170,8 +214,19 @@ function initBottomSheet() {
  */
 function showBottomSheet() {
     const bottomSheet = document.getElementById('mobileBottomSheet');
+    const content = bottomSheet?.querySelector('.bottom-sheet-content');
+    const searchBtn = document.getElementById('mobileSearchBtn');
+
     if (bottomSheet) {
         bottomSheet.classList.remove('minimized');
+        currentSheetHeight = 45;
+        bottomSheet.style.maxHeight = `${currentSheetHeight}vh`;
+        if (content) {
+            content.style.maxHeight = `calc(${currentSheetHeight}vh - 24px)`;
+        }
+        if (searchBtn) {
+            searchBtn.style.bottom = `calc(56px + ${currentSheetHeight}vh + 10px)`;
+        }
         bottomSheetMinimized = false;
     }
 }
@@ -181,8 +236,14 @@ function showBottomSheet() {
  */
 function minimizeBottomSheet() {
     const bottomSheet = document.getElementById('mobileBottomSheet');
+    const searchBtn = document.getElementById('mobileSearchBtn');
+
     if (bottomSheet) {
         bottomSheet.classList.add('minimized');
+        currentSheetHeight = 0;
+        if (searchBtn) {
+            searchBtn.style.bottom = `calc(56px + 20px)`;
+        }
         bottomSheetMinimized = true;
     }
 }
