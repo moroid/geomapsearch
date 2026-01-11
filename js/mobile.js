@@ -4,7 +4,13 @@
  * スマートフォン向けのUI操作を管理する
  */
 
-import { getMap } from './state.js';
+import {
+    getMap,
+    getLocationMarker,
+    getLocationCircle,
+    setLocationMarker,
+    setLocationCircle
+} from './state.js';
 import { toggleSeamlessLayer, updateSeamlessOpacity } from './layers.js';
 import { showSeamlessLegend } from './legend.js';
 
@@ -31,6 +37,7 @@ export function initMobileUI() {
     initMobileSearchButton();
     initMobileNavigation();
     initMobileSeamlessControls();
+    initMobileLocationButton();
 
     // ウィンドウリサイズ時の処理
     window.addEventListener('resize', handleResize);
@@ -232,4 +239,143 @@ export function updateMobileLegendContent(html) {
     if (mobileLegendContent) {
         mobileLegendContent.innerHTML = html;
     }
+}
+
+/**
+ * モバイル現在地ボタンの初期化
+ */
+function initMobileLocationButton() {
+    const locationBtn = document.getElementById('mobileLocationBtn');
+    if (!locationBtn) return;
+
+    locationBtn.addEventListener('click', () => {
+        locateUser();
+    });
+}
+
+/**
+ * 現在地を取得して表示
+ */
+function locateUser() {
+    const locationBtn = document.getElementById('mobileLocationBtn');
+    const map = getMap();
+
+    if (!map) return;
+
+    // Geolocation APIがサポートされているか確認
+    if (!navigator.geolocation) {
+        showLocationError('この端末では位置情報を取得できません');
+        return;
+    }
+
+    // ローディング状態にする
+    setLocationButtonState('loading');
+
+    // 現在地を取得
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude, accuracy } = position.coords;
+            showUserLocation(latitude, longitude, accuracy);
+            setLocationButtonState('active');
+        },
+        (error) => {
+            let message = '位置情報を取得できませんでした';
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    message = '位置情報の使用が許可されていません';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = '位置情報を取得できませんでした';
+                    break;
+                case error.TIMEOUT:
+                    message = '位置情報の取得がタイムアウトしました';
+                    break;
+            }
+            showLocationError(message);
+            setLocationButtonState('error');
+
+            // 3秒後にエラー状態をリセット
+            setTimeout(() => {
+                setLocationButtonState('default');
+            }, 3000);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
+
+/**
+ * 現在地を地図上に表示
+ */
+function showUserLocation(lat, lng, accuracy) {
+    const map = getMap();
+
+    // 既存のマーカーと円を削除
+    clearLocationMarkers();
+
+    // 精度範囲の円を追加
+    const circle = L.circle([lat, lng], {
+        radius: accuracy,
+        color: '#2c5f2d',
+        fillColor: '#2c5f2d',
+        fillOpacity: 0.15,
+        weight: 2
+    }).addTo(map);
+    setLocationCircle(circle);
+
+    // 現在地マーカーを追加（カスタムアイコン）
+    const locationIcon = L.divIcon({
+        className: 'location-marker',
+        html: '<div class="location-marker-dot"></div><div class="location-marker-pulse"></div>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+    });
+
+    const marker = L.marker([lat, lng], { icon: locationIcon }).addTo(map);
+    setLocationMarker(marker);
+
+    // 地図を現在地に移動
+    map.setView([lat, lng], 14);
+}
+
+/**
+ * 現在地マーカーをクリア
+ */
+function clearLocationMarkers() {
+    const map = getMap();
+    const marker = getLocationMarker();
+    const circle = getLocationCircle();
+
+    if (marker) {
+        map.removeLayer(marker);
+        setLocationMarker(null);
+    }
+    if (circle) {
+        map.removeLayer(circle);
+        setLocationCircle(null);
+    }
+}
+
+/**
+ * 現在地ボタンの状態を設定
+ */
+function setLocationButtonState(state) {
+    const btn = document.getElementById('mobileLocationBtn');
+    if (!btn) return;
+
+    btn.classList.remove('loading', 'active', 'error');
+    if (state !== 'default') {
+        btn.classList.add(state);
+    }
+}
+
+/**
+ * 位置情報エラーを表示
+ */
+function showLocationError(message) {
+    // 簡易的なアラート表示
+    alert(message);
 }
