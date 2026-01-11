@@ -66,6 +66,7 @@ function initEventListeners() {
 window.copyToClipboard = copyToClipboard;
 window.showSeamlessLegend = showSeamlessLegend;
 window.openLegendImageZoom = openLegendImageZoom;
+window.searchGeologicalMaps = searchGeologicalMaps;
 
 // DOMContentLoaded時に初期化
 document.addEventListener('DOMContentLoaded', init);
