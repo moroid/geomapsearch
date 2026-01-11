@@ -543,8 +543,15 @@ function downloadLegendImage() {
 
 /**
  * 凡例画像をズームモードで表示（パネル内拡大）
+ * モバイルでは新しいタブで画像を開く
  */
 export function openLegendImageZoom(imgElement) {
+    // モバイルの場合は新しいタブで画像を開く
+    if (window.innerWidth <= 768) {
+        window.open(imgElement.src, '_blank');
+        return;
+    }
+
     const content = document.getElementById('legendContent');
     const zoomControls = document.getElementById('legendZoomControls');
 
