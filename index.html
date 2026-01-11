@@ -72,12 +72,6 @@
         <!-- 地図コンテナ -->
         <div id="map"></div>
 
-        <!-- モバイル用フローティング検索ボタン -->
-        <button id="mobileSearchBtn" class="mobile-search-btn">
-            <i class="fas fa-search"></i>
-            <span>検索</span>
-        </button>
-
         <!-- モバイル用ボトムナビゲーション -->
         <nav id="mobileNav" class="mobile-nav">
             <button class="mobile-nav-item active" data-panel="search">
@@ -96,7 +90,11 @@
 
         <!-- モバイル用ボトムシート -->
         <div id="mobileBottomSheet" class="mobile-bottom-sheet">
-            <div class="bottom-sheet-handle"></div>
+            <!-- 検索ボタン（ボトムシートの上に固定） -->
+            <button id="mobileSearchBtn" class="mobile-search-btn">
+                <i class="fas fa-search"></i>
+                <span>この範囲で検索</span>
+            </button>
             <div id="mobileBottomSheetContent" class="bottom-sheet-content">
                 <!-- 検索パネル -->
                 <div id="mobileSearchPanel" class="mobile-panel active">
