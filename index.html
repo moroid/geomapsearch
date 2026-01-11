@@ -70,6 +70,16 @@
                     Macrostrat地質図を表示
                 </label>
                 <div id="macrostratControls" style="display: none;">
+                    <div class="select-container">
+                        <label>スケール:</label>
+                        <select id="macrostratScale">
+                            <option value="carto">自動（推奨）</option>
+                            <option value="tiny">小縮尺（世界規模）</option>
+                            <option value="small">中小縮尺</option>
+                            <option value="medium">中縮尺</option>
+                            <option value="large">大縮尺（詳細）</option>
+                        </select>
+                    </div>
                     <div class="slider-container">
                         <label>透明度: <span id="macrostratOpacityValue">70</span>%</label>
                         <input type="range" id="macrostratOpacity" min="0" max="100" value="70" />
@@ -151,6 +161,16 @@
                         Macrostrat地質図を表示
                     </label>
                     <div id="mobileMacrostratControls" style="display: none;">
+                        <div class="select-container">
+                            <label>スケール:</label>
+                            <select id="mobileMacrostratScale">
+                                <option value="carto">自動（推奨）</option>
+                                <option value="tiny">小縮尺（世界規模）</option>
+                                <option value="small">中小縮尺</option>
+                                <option value="medium">中縮尺</option>
+                                <option value="large">大縮尺（詳細）</option>
+                            </select>
+                        </div>
                         <div class="slider-container">
                             <label>透明度: <span id="mobileMacrostratOpacityValue">70</span>%</label>
                             <input type="range" id="mobileMacrostratOpacity" min="0" max="100" value="70" />

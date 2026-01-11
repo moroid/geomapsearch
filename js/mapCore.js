@@ -3,6 +3,7 @@
  */
 
 import { setMap, getMap, setHoverPreviewLayer, getHoverPreviewLayer } from './state.js';
+import { OPENTOPOMAP_URL, USGS_IMAGERY_URL, USGS_TOPO_URL } from './config.js';
 
 /**
  * Leaflet地図の初期化
@@ -39,13 +40,34 @@ export function initMap() {
         maxZoom: 18
     });
 
+    // OpenTopoMap（等高線入り地形図）
+    const openTopoMap = L.tileLayer(OPENTOPOMAP_URL, {
+        attribution: '© <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+        maxZoom: 17
+    });
+
+    // USGS Imagery（アメリカ衛星画像）
+    const usgsImagery = L.tileLayer(USGS_IMAGERY_URL, {
+        attribution: '<a href="https://www.usgs.gov/">USGS</a>',
+        maxZoom: 16
+    });
+
+    // USGS Topo（アメリカ地形図）
+    const usgsTopo = L.tileLayer(USGS_TOPO_URL, {
+        attribution: '<a href="https://www.usgs.gov/">USGS</a>',
+        maxZoom: 16
+    });
+
     // デフォルトのベースマップを追加
     osmLayer.addTo(map);
 
     // レイヤーコントロール
     const baseMaps = {
         'OpenStreetMap': osmLayer,
-        '地理院タイル（淡色）': gsiPale
+        '地理院タイル（淡色）': gsiPale,
+        'OpenTopoMap（地形図）': openTopoMap,
+        'USGS 衛星画像': usgsImagery,
+        'USGS 地形図': usgsTopo
     };
 
     L.control.layers(baseMaps).addTo(map);

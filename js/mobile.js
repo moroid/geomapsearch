@@ -5,7 +5,7 @@
  */
 
 import { getMap } from './state.js';
-import { toggleSeamlessLayer, updateSeamlessOpacity, toggleMacrostratLayer, updateMacrostratOpacity } from './layers.js';
+import { toggleSeamlessLayer, updateSeamlessOpacity, toggleMacrostratLayer, updateMacrostratOpacity, changeMacrostratScale } from './layers.js';
 import { showSeamlessLegend } from './legend.js';
 
 // モバイル判定の閾値
@@ -233,6 +233,20 @@ function initMobileMacrostratControls() {
                 mobileMacrostratOpacityValue.textContent = e.target.value;
             }
             updateMacrostratOpacity(e);
+        });
+    }
+
+    // スケール選択
+    const mobileMacrostratScale = document.getElementById('mobileMacrostratScale');
+    const desktopMacrostratScale = document.getElementById('macrostratScale');
+
+    if (mobileMacrostratScale) {
+        mobileMacrostratScale.addEventListener('change', (e) => {
+            // デスクトップ版と同期
+            if (desktopMacrostratScale) {
+                desktopMacrostratScale.value = e.target.value;
+            }
+            changeMacrostratScale(e);
         });
     }
 }

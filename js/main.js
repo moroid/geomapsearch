@@ -8,7 +8,7 @@
 
 import { initMap } from './mapCore.js';
 import { searchGeologicalMaps } from './search.js';
-import { toggleSeamlessLayer, updateSeamlessOpacity, toggleMacrostratLayer, updateMacrostratOpacity } from './layers.js';
+import { toggleSeamlessLayer, updateSeamlessOpacity, toggleMacrostratLayer, updateMacrostratOpacity, changeMacrostratScale } from './layers.js';
 import {
     showSeamlessLegend,
     closeLegendSidebar,
@@ -68,6 +68,12 @@ function initEventListeners() {
     const macrostratOpacity = document.getElementById('macrostratOpacity');
     if (macrostratOpacity) {
         macrostratOpacity.addEventListener('input', updateMacrostratOpacity);
+    }
+
+    // Macrostratスケール選択
+    const macrostratScale = document.getElementById('macrostratScale');
+    if (macrostratScale) {
+        macrostratScale.addEventListener('change', changeMacrostratScale);
     }
 
     // 凡例サイドバー閉じるボタン
