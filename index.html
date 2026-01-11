@@ -12,10 +12,7 @@
     <div id="app">
         <!-- モバイル用ヘッダー -->
         <header id="mobileHeader" class="mobile-header">
-            <h1>地質図検索</h1>
-            <button id="mobileMenuBtn" class="mobile-menu-btn" aria-label="メニュー">
-                <i class="fas fa-bars"></i>
-            </button>
+            <h1>🗺️ 地質図検索ビューア</h1>
         </header>
 
         <!-- サイドパネル -->
@@ -78,26 +75,22 @@
         <!-- モバイル用フローティング検索ボタン -->
         <button id="mobileSearchBtn" class="mobile-search-btn">
             <i class="fas fa-search"></i>
-            <span>この範囲で検索</span>
+            <span>検索</span>
         </button>
 
         <!-- モバイル用ボトムナビゲーション -->
         <nav id="mobileNav" class="mobile-nav">
             <button class="mobile-nav-item active" data-panel="search">
                 <i class="fas fa-search"></i>
-                <span>検索</span>
+                <span>検索結果</span>
             </button>
             <button class="mobile-nav-item" data-panel="layers">
                 <i class="fas fa-layer-group"></i>
-                <span>レイヤー</span>
+                <span>表示中</span>
             </button>
             <button class="mobile-nav-item" data-panel="seamless">
                 <i class="fas fa-map"></i>
                 <span>シームレス</span>
-            </button>
-            <button class="mobile-nav-item" data-panel="legend">
-                <i class="fas fa-list-alt"></i>
-                <span>凡例</span>
             </button>
         </nav>
 
@@ -136,17 +129,9 @@
                         </button>
                     </div>
                 </div>
-                <!-- 凡例パネル -->
-                <div id="mobileLegendPanel" class="mobile-panel">
-                    <div id="mobileLegendContent">
-                        <p class="placeholder-text">地質図を選択すると凡例が表示されます。</p>
-                    </div>
-                </div>
             </div>
         </div>
 
-        <!-- モバイル用オーバーレイ -->
-        <div id="mobileOverlay" class="mobile-overlay"></div>
 
         <!-- 右サイドバー開閉ボタン -->
         <button id="legendSidebarToggle" class="legend-sidebar-toggle" title="凡例パネルを開く">

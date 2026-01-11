@@ -6,7 +6,7 @@
 
 import { getMap } from './state.js';
 import { toggleSeamlessLayer, updateSeamlessOpacity } from './layers.js';
-import { showSeamlessLegend, openLegendSidebar } from './legend.js';
+import { showSeamlessLegend } from './legend.js';
 
 // モバイル判定の閾値
 const MOBILE_BREAKPOINT = 768;
@@ -15,7 +15,7 @@ const MOBILE_BREAKPOINT = 768;
 let activePanel = 'search';
 
 // ボトムシートの状態
-let bottomSheetState = 'collapsed'; // 'collapsed' | 'expanded' | 'minimized'
+let bottomSheetMinimized = false;
 
 /**
  * モバイルかどうかを判定
@@ -28,13 +28,10 @@ export function isMobile() {
  * モバイルUIの初期化
  */
 export function initMobileUI() {
-    // イベントリスナーは常に設定（要素が存在する場合のみ動作）
     initMobileSearchButton();
     initMobileNavigation();
-    initMobileMenuButton();
     initBottomSheet();
     initMobileSeamlessControls();
-    initMobileOverlay();
 
     // ウィンドウリサイズ時の処理
     window.addEventListener('resize', handleResize);
@@ -75,8 +72,8 @@ function initMobileNavigation() {
             navItems.forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
 
-            // ボトムシートを展開
-            expandBottomSheet();
+            // ボトムシートを表示
+            showBottomSheet();
         });
     });
 }
@@ -95,11 +92,6 @@ function switchPanel(panelName) {
     const targetPanel = document.getElementById(`mobile${capitalizeFirst(panelName)}Panel`);
     if (targetPanel) {
         targetPanel.classList.add('active');
-    }
-
-    // 凡例パネルの場合は凡例サイドバーを開く
-    if (panelName === 'legend') {
-        openLegendSidebar();
     }
 }
 
@@ -121,41 +113,15 @@ function initMobileSearchButton() {
             if (window.searchGeologicalMaps) {
                 window.searchGeologicalMaps();
             }
-            // 検索後にボトムシートを展開して検索パネルを表示
+            // 検索後にボトムシートを表示して検索パネルを表示
             switchPanel('search');
-            expandBottomSheet();
+            showBottomSheet();
 
             // ナビのアクティブ状態を更新
             const navItems = document.querySelectorAll('.mobile-nav-item');
             navItems.forEach(item => {
                 item.classList.toggle('active', item.dataset.panel === 'search');
             });
-        });
-    }
-}
-
-/**
- * モバイルメニューボタンの初期化
- */
-function initMobileMenuButton() {
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('mobileOverlay');
-
-    if (mobileMenuBtn && sidebar) {
-        mobileMenuBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('mobile-open');
-            overlay?.classList.toggle('active');
-
-            // アイコンを切り替え
-            const icon = mobileMenuBtn.querySelector('i');
-            if (sidebar.classList.contains('mobile-open')) {
-                icon.classList.remove('fa-bars');
-                icon.classList.add('fa-times');
-            } else {
-                icon.classList.remove('fa-times');
-                icon.classList.add('fa-bars');
-            }
         });
     }
 }
@@ -170,80 +136,54 @@ function initBottomSheet() {
     if (!bottomSheet || !handle) return;
 
     let startY = 0;
-    let startTransform = 0;
 
     // タッチ操作でのドラッグ
     handle.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY;
-        const transform = getComputedStyle(bottomSheet).transform;
-        if (transform !== 'none') {
-            const matrix = new DOMMatrix(transform);
-            startTransform = matrix.m42;
-        }
-        bottomSheet.style.transition = 'none';
-    });
-
-    handle.addEventListener('touchmove', (e) => {
-        const currentY = e.touches[0].clientY;
-        const diff = currentY - startY;
-        const newTransform = Math.max(0, startTransform + diff);
-        bottomSheet.style.transform = `translateY(${newTransform}px)`;
     });
 
     handle.addEventListener('touchend', (e) => {
-        bottomSheet.style.transition = 'transform 0.3s ease';
         const currentY = e.changedTouches[0].clientY;
         const diff = currentY - startY;
 
-        if (diff > 50) {
-            // 下にスワイプ -> 折りたたむ
-            collapseBottomSheet();
-        } else if (diff < -50) {
-            // 上にスワイプ -> 展開
-            expandBottomSheet();
-        } else {
-            // 元の状態に戻す
-            if (bottomSheetState === 'expanded') {
-                expandBottomSheet();
-            } else {
-                collapseBottomSheet();
-            }
+        if (diff > 30) {
+            // 下にスワイプ -> 最小化
+            minimizeBottomSheet();
+        } else if (diff < -30) {
+            // 上にスワイプ -> 表示
+            showBottomSheet();
         }
     });
 
-    // タップで展開/折りたたみ切り替え
+    // タップで表示/最小化切り替え
     handle.addEventListener('click', () => {
-        if (bottomSheetState === 'expanded') {
-            collapseBottomSheet();
+        if (bottomSheetMinimized) {
+            showBottomSheet();
         } else {
-            expandBottomSheet();
+            minimizeBottomSheet();
         }
     });
 }
 
 /**
- * ボトムシートを展開
+ * ボトムシートを表示
  */
-function expandBottomSheet() {
+function showBottomSheet() {
     const bottomSheet = document.getElementById('mobileBottomSheet');
     if (bottomSheet) {
-        bottomSheet.classList.add('expanded');
         bottomSheet.classList.remove('minimized');
-        bottomSheet.style.transform = '';
-        bottomSheetState = 'expanded';
+        bottomSheetMinimized = false;
     }
 }
 
 /**
- * ボトムシートを折りたたむ
+ * ボトムシートを最小化
  */
-function collapseBottomSheet() {
+function minimizeBottomSheet() {
     const bottomSheet = document.getElementById('mobileBottomSheet');
     if (bottomSheet) {
-        bottomSheet.classList.remove('expanded');
-        bottomSheet.classList.remove('minimized');
-        bottomSheet.style.transform = '';
-        bottomSheetState = 'collapsed';
+        bottomSheet.classList.add('minimized');
+        bottomSheetMinimized = true;
     }
 }
 
@@ -291,30 +231,6 @@ function initMobileSeamlessControls() {
 
     if (mobileSeamlessLegendBtn) {
         mobileSeamlessLegendBtn.addEventListener('click', showSeamlessLegend);
-    }
-}
-
-/**
- * モバイルオーバーレイの初期化
- */
-function initMobileOverlay() {
-    const overlay = document.getElementById('mobileOverlay');
-    const sidebar = document.getElementById('sidebar');
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-
-    if (overlay) {
-        overlay.addEventListener('click', () => {
-            // サイドバーを閉じる
-            sidebar?.classList.remove('mobile-open');
-            overlay.classList.remove('active');
-
-            // メニューボタンのアイコンを戻す
-            const icon = mobileMenuBtn?.querySelector('i');
-            if (icon) {
-                icon.classList.remove('fa-times');
-                icon.classList.add('fa-bars');
-            }
-        });
     }
 }
 
