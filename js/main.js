@@ -8,7 +8,7 @@
 
 import { initMap } from './mapCore.js';
 import { searchGeologicalMaps } from './search.js';
-import { toggleSeamlessLayer, updateSeamlessOpacity } from './layers.js';
+import { toggleSeamlessLayer, updateSeamlessOpacity, toggleMacrostratLayer, updateMacrostratOpacity, changeMacrostratScale } from './layers.js';
 import {
     showSeamlessLegend,
     closeLegendSidebar,
@@ -56,6 +56,24 @@ function initEventListeners() {
     const seamlessLegendBtn = document.getElementById('seamlessLegendBtn');
     if (seamlessLegendBtn) {
         seamlessLegendBtn.addEventListener('click', showSeamlessLegend);
+    }
+
+    // Macrostrat（世界の地質図）トグル
+    const macrostratToggle = document.getElementById('macrostratToggle');
+    if (macrostratToggle) {
+        macrostratToggle.addEventListener('change', toggleMacrostratLayer);
+    }
+
+    // Macrostrat透明度
+    const macrostratOpacity = document.getElementById('macrostratOpacity');
+    if (macrostratOpacity) {
+        macrostratOpacity.addEventListener('input', updateMacrostratOpacity);
+    }
+
+    // Macrostratスケール選択
+    const macrostratScale = document.getElementById('macrostratScale');
+    if (macrostratScale) {
+        macrostratScale.addEventListener('change', changeMacrostratScale);
     }
 
     // 凡例サイドバー閉じるボタン

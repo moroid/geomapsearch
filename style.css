@@ -379,6 +379,37 @@ body {
     border: none;
 }
 
+/* セレクトボックス */
+.select-container {
+    margin-top: 12px;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 6px;
+}
+
+.select-container label {
+    display: block;
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.select-container select {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    color: #333;
+    cursor: pointer;
+}
+
+.select-container select:focus {
+    outline: none;
+    border-color: #2c5f2d;
+}
+
 /* シームレス地質図凡例ボタン */
 .seamless-legend-btn {
     width: 100%;
@@ -421,6 +452,23 @@ body {
 .seamless-legend-refresh-btn:hover {
     background: #c8e6c9;
     border-color: #81c784;
+}
+
+/* Macrostrat情報テキスト */
+.macrostrat-info {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.macrostrat-info a {
+    color: #2c5f2d;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.macrostrat-info a:hover {
+    text-decoration: underline;
 }
 
 /* フッター */
