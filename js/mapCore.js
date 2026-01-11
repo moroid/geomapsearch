@@ -13,7 +13,9 @@ export function initMap() {
         center: [36.0, 138.0],
         zoom: 6,
         zoomControl: true,
-        attributionControl: false
+        attributionControl: false,
+        doubleClickZoom: false,  // ダブルクリック/タップでのズームを無効化
+        tapTolerance: 15         // タップの許容範囲を調整
     });
 
     // 帰属表示を追加（Leafletを除外）
