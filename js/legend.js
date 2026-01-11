@@ -388,8 +388,8 @@ async function getVisibleMacrostratLegend() {
     const south = bounds.getSouth();
     const north = bounds.getNorth();
 
-    // 範囲内を5x5グリッドでサンプリング
-    const gridSize = 5;
+    // 範囲内を7x7グリッドでサンプリング（49ポイント）
+    const gridSize = 7;
     const latStep = (north - south) / gridSize;
     const lngStep = (east - west) / gridSize;
 
@@ -403,10 +403,9 @@ async function getVisibleMacrostratLegend() {
         }
     }
 
-    // 並列でAPIを呼び出し（最大10件に制限）
-    const limitedPoints = samplePoints.slice(0, 10);
+    // 並列でAPIを呼び出し（全ポイント）
     const results = await Promise.allSettled(
-        limitedPoints.map(point => fetchMacrostratUnit(point.lat, point.lng))
+        samplePoints.map(point => fetchMacrostratUnit(point.lat, point.lng))
     );
 
     // 結果を集約
