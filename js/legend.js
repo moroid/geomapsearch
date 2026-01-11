@@ -438,21 +438,42 @@ async function fetchMacrostratUnit(lat, lng) {
         }
 
         const data = await response.json();
+        console.log('Macrostrat API response:', data);
 
-        if (data.success && data.success.data && data.success.data.mapData) {
-            return data.success.data.mapData.map(item => ({
-                unit_id: item.map_id || item.unit_id,
-                name: item.name || '',
-                strat_name: item.strat_name || item.name || '',
-                age: item.age || '',
-                t_age: item.t_age,
-                b_age: item.b_age,
-                lith: item.lith || '',
-                color: item.color ? `#${item.color}` : '#999999'
-            }));
+        // レスポンス形式に応じて解析
+        let mapData = null;
+
+        // 形式1: { success: { data: { mapData: [...] } } }
+        if (data.success?.data?.mapData) {
+            mapData = data.success.data.mapData;
+        }
+        // 形式2: { success: { data: [...] } }
+        else if (data.success?.data && Array.isArray(data.success.data)) {
+            mapData = data.success.data;
+        }
+        // 形式3: { data: [...] }
+        else if (data.data && Array.isArray(data.data)) {
+            mapData = data.data;
+        }
+        // 形式4: 直接配列
+        else if (Array.isArray(data)) {
+            mapData = data;
         }
 
-        return null;
+        if (!mapData || mapData.length === 0) {
+            return null;
+        }
+
+        return mapData.map(item => ({
+            unit_id: item.map_id || item.unit_id || item.id || Math.random().toString(36),
+            name: item.name || item.unit_name || '',
+            strat_name: item.strat_name || item.name || item.unit_name || '',
+            age: item.age || item.interval_name || '',
+            t_age: item.t_age ?? item.top_age,
+            b_age: item.b_age ?? item.bottom_age,
+            lith: item.lith || item.lithology || '',
+            color: item.color ? (item.color.startsWith('#') ? item.color : `#${item.color}`) : '#999999'
+        }));
     } catch (error) {
         console.warn('Macrostrat API エラー:', error);
         return null;
