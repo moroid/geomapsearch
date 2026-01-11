@@ -103,16 +103,32 @@ async function fetchSeamlessGeology(lat, lng) {
 
         const data = await response.json();
         console.log('シームレスAPI レスポンス:', data);
+        console.log('シームレスAPI レスポンス型:', typeof data, Array.isArray(data));
 
-        // 配列で返される（空の場合もある）
-        if (!Array.isArray(data) || data.length === 0) {
-            console.log('シームレス: データなし');
+        // レスポンスが空の場合
+        if (!data) {
+            console.log('シームレス: データなし（null/undefined）');
             return null;
         }
 
-        // 最初の要素を返す（通常は1つの地質単元のみ）
-        console.log('シームレス地質データ:', data[0]);
-        return data[0];
+        // 配列の場合
+        if (Array.isArray(data)) {
+            if (data.length === 0) {
+                console.log('シームレス: データなし（空配列）');
+                return null;
+            }
+            console.log('シームレス地質データ（配列）:', data[0]);
+            return data[0];
+        }
+
+        // オブジェクトの場合（単一の地質データ）
+        if (typeof data === 'object') {
+            console.log('シームレス地質データ（オブジェクト）:', data);
+            return data;
+        }
+
+        console.log('シームレス: 予期しないデータ形式');
+        return null;
 
     } catch (error) {
         console.warn('シームレス地質図API エラー:', error);
