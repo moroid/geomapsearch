@@ -1068,17 +1068,18 @@ body {
 .mobile-search-btn {
     display: none;
     position: fixed;
-    top: 50px;
-    left: 10px;
-    padding: 10px 16px;
+    bottom: calc(56px + 45vh + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
     background: linear-gradient(135deg, #2c5f2d, #3a7d3a);
     color: white;
     border: none;
-    border-radius: 20px;
-    font-size: 0.85rem;
+    border-radius: 24px;
+    font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
-    box-shadow: 0 2px 10px rgba(44, 95, 45, 0.4);
+    box-shadow: 0 3px 12px rgba(44, 95, 45, 0.4);
     z-index: 1050;
     gap: 6px;
     align-items: center;
@@ -1159,18 +1160,13 @@ body {
 }
 
 .bottom-sheet-handle {
-    width: 36px;
-    height: 4px;
-    background: #ccc;
-    border-radius: 2px;
-    margin: 8px auto;
-    cursor: grab;
+    display: none;
 }
 
 .bottom-sheet-content {
-    padding: 0 12px 12px;
+    padding: 12px;
     overflow-y: auto;
-    max-height: calc(45vh - 24px);
+    max-height: calc(45vh - 12px);
 }
 
 /* モバイルパネル */
@@ -1342,7 +1338,11 @@ body {
     }
 
     .bottom-sheet-content {
-        max-height: calc(35vh - 24px);
+        max-height: calc(35vh - 12px);
+    }
+
+    .mobile-search-btn {
+        bottom: calc(48px + 35vh + 8px);
     }
 
     #map {
