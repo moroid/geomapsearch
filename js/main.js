@@ -35,22 +35,40 @@ function init() {
  */
 function initEventListeners() {
     // 検索ボタン
-    document.getElementById('searchBtn').addEventListener('click', searchGeologicalMaps);
+    const searchBtn = document.getElementById('searchBtn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', searchGeologicalMaps);
+    }
 
     // シームレス地質図トグル
-    document.getElementById('seamlessToggle').addEventListener('change', toggleSeamlessLayer);
+    const seamlessToggle = document.getElementById('seamlessToggle');
+    if (seamlessToggle) {
+        seamlessToggle.addEventListener('change', toggleSeamlessLayer);
+    }
 
     // シームレス地質図透明度
-    document.getElementById('seamlessOpacity').addEventListener('input', updateSeamlessOpacity);
+    const seamlessOpacity = document.getElementById('seamlessOpacity');
+    if (seamlessOpacity) {
+        seamlessOpacity.addEventListener('input', updateSeamlessOpacity);
+    }
 
     // シームレス地質図凡例ボタン
-    document.getElementById('seamlessLegendBtn').addEventListener('click', showSeamlessLegend);
+    const seamlessLegendBtn = document.getElementById('seamlessLegendBtn');
+    if (seamlessLegendBtn) {
+        seamlessLegendBtn.addEventListener('click', showSeamlessLegend);
+    }
 
     // 凡例サイドバー閉じるボタン
-    document.getElementById('closeLegendBtn').addEventListener('click', closeLegendSidebar);
+    const closeLegendBtn = document.getElementById('closeLegendBtn');
+    if (closeLegendBtn) {
+        closeLegendBtn.addEventListener('click', closeLegendSidebar);
+    }
 
     // 凡例サイドバー開くボタン
-    document.getElementById('legendSidebarToggle').addEventListener('click', openLegendSidebar);
+    const legendSidebarToggle = document.getElementById('legendSidebarToggle');
+    if (legendSidebarToggle) {
+        legendSidebarToggle.addEventListener('click', openLegendSidebar);
+    }
 
     // 凡例サイドバーリサイズ
     initLegendSidebarResize();
