@@ -388,8 +388,8 @@ async function getVisibleMacrostratLegend() {
     const south = bounds.getSouth();
     const north = bounds.getNorth();
 
-    // 範囲内を7x7グリッドでサンプリング（49ポイント）
-    const gridSize = 7;
+    // 範囲内を10x10グリッドでサンプリング（100ポイント）
+    const gridSize = 10;
     const latStep = (north - south) / gridSize;
     const lngStep = (east - west) / gridSize;
 
