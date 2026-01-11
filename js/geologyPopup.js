@@ -52,17 +52,21 @@ async function handleMapClick(e) {
         }
 
         const results = await Promise.allSettled(promises);
+        console.log('API呼び出し結果:', results);
 
         // 結果を整理
         let seamlessData = null;
         let macrostratData = null;
 
         results.forEach(result => {
-            if (result.status === 'fulfilled' && result.value.data) {
+            console.log('result:', result);
+            if (result.status === 'fulfilled' && result.value && result.value.data) {
                 if (result.value.type === 'seamless') {
                     seamlessData = result.value.data;
+                    console.log('seamlessData取得成功:', seamlessData);
                 } else if (result.value.type === 'macrostrat') {
                     macrostratData = result.value.data;
+                    console.log('macrostratData取得成功:', macrostratData);
                 }
             }
         });
@@ -84,24 +88,30 @@ async function fetchSeamlessGeology(lat, lng) {
     try {
         // 日本の範囲外の場合はスキップ
         if (lat < 20 || lat > 46 || lng < 122 || lng > 154) {
+            console.log('シームレス: 日本の範囲外');
             return null;
         }
 
         const url = `${SEAMLESS_LEGEND_URL}?point=${lat},${lng}`;
+        console.log('シームレスAPI URL:', url);
         const response = await fetch(url);
 
         if (!response.ok) {
+            console.warn('シームレスAPI レスポンスエラー:', response.status);
             return null;
         }
 
         const data = await response.json();
+        console.log('シームレスAPI レスポンス:', data);
 
         // 配列で返される（空の場合もある）
         if (!Array.isArray(data) || data.length === 0) {
+            console.log('シームレス: データなし');
             return null;
         }
 
         // 最初の要素を返す（通常は1つの地質単元のみ）
+        console.log('シームレス地質データ:', data[0]);
         return data[0];
 
     } catch (error) {
