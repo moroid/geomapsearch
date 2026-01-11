@@ -1160,17 +1160,11 @@ body {
 }
 
 .bottom-sheet-handle {
-    width: 40px;
-    height: 5px;
-    background: #ccc;
-    border-radius: 3px;
-    margin: 8px auto;
-    cursor: grab;
+    display: none;
 }
 
 .bottom-sheet-handle:active {
-    cursor: grabbing;
-    background: #999;
+    display: none;
 }
 
 .bottom-sheet-content {
