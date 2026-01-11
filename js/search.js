@@ -10,6 +10,33 @@ import { showBoundsPreview, hideBoundsPreview } from './mapCore.js';
 import { updateMobileSearchResults, isMobile } from './mobile.js';
 
 /**
+ * 2点間の距離を計算（簡易版、度単位）
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const dLat = lat2 - lat1;
+    const dLon = lon2 - lon1;
+    return Math.sqrt(dLat * dLat + dLon * dLon);
+}
+
+/**
+ * 結果を画面中心から近い順にソート
+ */
+function sortByDistanceFromCenter(results, mapCenter) {
+    return results.slice().sort((a, b) => {
+        // 各結果のboundsの中心を計算
+        const aCenterLat = (a.bounds.north + a.bounds.south) / 2;
+        const aCenterLon = (a.bounds.east + a.bounds.west) / 2;
+        const bCenterLat = (b.bounds.north + b.bounds.south) / 2;
+        const bCenterLon = (b.bounds.east + b.bounds.west) / 2;
+
+        const distA = calculateDistance(mapCenter.lat, mapCenter.lng, aCenterLat, aCenterLon);
+        const distB = calculateDistance(mapCenter.lat, mapCenter.lng, bCenterLat, bCenterLon);
+
+        return distA - distB;
+    });
+}
+
+/**
  * 表示範囲内の地質図を検索
  */
 export async function searchGeologicalMaps() {
@@ -46,7 +73,10 @@ export async function searchGeologicalMaps() {
             north: bounds.getNorth()
         };
 
-        const results = await fetchGeologicalMaps(bbox);
+        const rawResults = await fetchGeologicalMaps(bbox);
+        // 画面中心から近い順にソート
+        const mapCenter = map.getCenter();
+        const results = sortByDistanceFromCenter(rawResults, mapCenter);
         setSearchResults(results);
         window._searchResults = results;
 
@@ -384,28 +414,92 @@ function createResultItem(result, index) {
 }
 
 /**
- * モバイル用検索結果を描画
+ * モバイル用検索結果アイテムのHTMLを生成
+ */
+function createMobileResultItemHtml(result) {
+    const activeLayers = getActiveLayers();
+    const shortTitle = result.title.length > 50
+        ? result.title.substring(0, 50) + '...'
+        : result.title;
+    const selectedClass = activeLayers.has(result.id) ? ' selected' : '';
+
+    return `
+        <div class="result-item${selectedClass}" data-result-id="${result.id}" onclick="window.toggleMobileMapLayer('${result.id}')">
+            <div class="result-item-title">${shortTitle}</div>
+            <div class="result-item-info">
+                範囲: ${result.bounds.south.toFixed(2)}°N - ${result.bounds.north.toFixed(2)}°N
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * モバイル用検索結果を描画（カテゴリ別アコーディオン対応）
  */
 function renderMobileSearchResults(results) {
+    const categories = categorizeResults(results);
+    const categoryCount = Object.keys(categories).length;
+
     let html = '';
 
-    results.forEach((result) => {
-        const shortTitle = result.title.length > 50
-            ? result.title.substring(0, 50) + '...'
-            : result.title;
+    // カテゴリが1つ以下、または結果が5件以下の場合はフラット表示
+    if (categoryCount <= 1 || results.length <= 5) {
+        results.forEach((result) => {
+            html += createMobileResultItemHtml(result);
+        });
+    } else {
+        // カテゴリ別アコーディオン表示
+        const activeLayers = getActiveLayers();
+        let isFirst = true;
 
-        html += `
-            <div class="result-item" data-result-id="${result.id}" onclick="window.toggleMobileMapLayer('${result.id}')">
-                <div class="result-item-title">${shortTitle}</div>
-                <div class="result-item-info">
-                    範囲: ${result.bounds.south.toFixed(2)}°N - ${result.bounds.north.toFixed(2)}°N
+        for (const [categoryName, items] of Object.entries(categories)) {
+            const selectedCount = items.filter(item => activeLayers.has(item.id)).length;
+            const selectedBadge = selectedCount > 0
+                ? `<span class="accordion-selected-badge">${selectedCount}選択中</span>`
+                : '';
+
+            html += `
+                <div class="result-accordion">
+                    <div class="result-accordion-header${isFirst ? ' open' : ''}" onclick="window.toggleMobileAccordion(this)">
+                        <span class="accordion-icon">${isFirst ? '▼' : '▶'}</span>
+                        <span class="accordion-title">${categoryName}</span>
+                        <span class="accordion-count">(${items.length}件)</span>
+                        ${selectedBadge}
+                    </div>
+                    <div class="result-accordion-content${isFirst ? ' open' : ''}">
+            `;
+
+            items.forEach((result) => {
+                html += createMobileResultItemHtml(result);
+            });
+
+            html += `
+                    </div>
                 </div>
-            </div>
-        `;
-    });
+            `;
+
+            isFirst = false;
+        }
+    }
 
     updateMobileSearchResults(html, results.length);
 }
+
+// モバイル用アコーディオン切り替え関数をグローバルに公開
+window.toggleMobileAccordion = function(header) {
+    const isOpen = header.classList.contains('open');
+    const content = header.nextElementSibling;
+
+    if (isOpen) {
+        header.classList.remove('open');
+        content.classList.remove('open');
+        header.querySelector('.accordion-icon').textContent = '▶';
+    } else {
+        header.classList.add('open');
+        content.classList.add('open');
+        header.querySelector('.accordion-icon').textContent = '▼';
+    }
+};
 
 // モバイル用のレイヤートグル関数をグローバルに公開
 window.toggleMobileMapLayer = function(resultId) {
