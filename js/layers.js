@@ -2,7 +2,7 @@
  * レイヤー管理モジュール
  */
 
-import { SEAMLESS_TILE_URL, MACROSTRAT_TILE_URL, MACROSTRAT_SCALES } from './config.js';
+import { SEAMLESS_TILE_URL, MACROSTRAT_TILE_URL } from './config.js';
 import {
     getMap,
     getActiveLayers,
@@ -436,6 +436,7 @@ export function toggleMacrostratLayer(e) {
     const map = getMap();
     const macrostratControls = document.getElementById('macrostratControls');
     const mobileMacrostratControls = document.getElementById('mobileMacrostratControls');
+    const currentLegendLayerId = getCurrentLegendLayerId();
 
     if (e.target.checked) {
         const macrostratLayer = L.tileLayer(MACROSTRAT_TILE_URL, {
@@ -461,6 +462,9 @@ export function toggleMacrostratLayer(e) {
         }
         if (macrostratControls) macrostratControls.style.display = 'none';
         if (mobileMacrostratControls) mobileMacrostratControls.style.display = 'none';
+        if (currentLegendLayerId === 'macrostrat') {
+            closeLegendSidebar();
+        }
 
         // 両方のチェックボックスを同期
         syncMacrostratToggle(false);
@@ -498,46 +502,4 @@ export function updateMacrostratOpacity(e) {
     if (macrostratLayer) {
         macrostratLayer.setOpacity(opacity);
     }
-}
-
-/**
- * Macrostratのスケールを変更
- */
-export function changeMacrostratScale(e) {
-    const scale = e.target.value;
-    const map = getMap();
-    const macrostratLayer = getMacrostratLayer();
-
-    if (!macrostratLayer || !MACROSTRAT_SCALES[scale]) return;
-
-    // 現在の透明度を保持
-    const currentOpacity = macrostratLayer.options.opacity;
-
-    // 古いレイヤーを削除
-    map.removeLayer(macrostratLayer);
-
-    // 新しいスケールのレイヤーを作成
-    const newLayer = L.tileLayer(MACROSTRAT_SCALES[scale].url, {
-        minZoom: 0,
-        maxZoom: 18,
-        maxNativeZoom: 13,
-        opacity: currentOpacity,
-        attribution: '<a href="https://macrostrat.org/">Macrostrat</a> (CC BY 4.0)',
-        pane: 'geologicalOverlay'
-    });
-    newLayer.addTo(map);
-    setMacrostratLayer(newLayer);
-
-    // 両方のセレクトを同期
-    syncMacrostratScale(scale);
-}
-
-/**
- * Macrostratスケールセレクトの同期
- */
-function syncMacrostratScale(scale) {
-    const desktopSelect = document.getElementById('macrostratScale');
-    const mobileSelect = document.getElementById('mobileMacrostratScale');
-    if (desktopSelect) desktopSelect.value = scale;
-    if (mobileSelect) mobileSelect.value = scale;
 }

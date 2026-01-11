@@ -2,7 +2,7 @@
  * 凡例表示モジュール
  */
 
-import { SEAMLESS_LEGEND_URL } from './config.js';
+import { SEAMLESS_LEGEND_URL, MACROSTRAT_API_URL } from './config.js';
 import {
     getMap,
     getActiveLayers,
@@ -253,6 +253,229 @@ export async function showSeamlessLegend() {
                 🔗 凡例ページを開く
             </a>
         `;
+    }
+}
+
+/**
+ * Macrostrat（世界の地質図）の凡例を表示
+ */
+export async function showMacrostratLegend() {
+    const sidebar = document.getElementById('legendSidebar');
+    const content = document.getElementById('legendContent');
+    const titleEl = document.getElementById('legendTitle');
+    const toggleBtn = document.getElementById('legendSidebarToggle');
+
+    // サイドバーを表示、トグルボタンを非表示
+    sidebar.classList.remove('hidden');
+    toggleBtn.classList.add('hidden');
+    setCurrentLegendLayerId('macrostrat');
+
+    titleEl.textContent = 'Macrostrat地質図';
+
+    // ローディング表示
+    content.innerHTML = `
+        <div class="legend-loading">
+            <span class="loading"></span>
+            <span>表示範囲の凡例を取得中...</span>
+        </div>
+    `;
+
+    try {
+        // 表示範囲内の凡例を取得（複数ポイントをサンプリング）
+        const legendData = await getVisibleMacrostratLegend();
+        const filterMessage = `表示範囲内の凡例（${legendData.length}項目）`;
+
+        // 凡例を時代（age）別に整理
+        const groups = {};
+        legendData.forEach(item => {
+            const group = item.age || '不明';
+            if (!groups[group]) {
+                groups[group] = [];
+            }
+            // 重複を避けるため、unit_idでチェック
+            if (!groups[group].some(existing => existing.unit_id === item.unit_id)) {
+                groups[group].push(item);
+            }
+        });
+
+        // HTMLを構築
+        let legendHtml = `
+            <div class="legend-section">
+                <div class="legend-section-title">${filterMessage}</div>
+                <p style="font-size: 0.75rem; color: #666; margin-bottom: 10px;">
+                    地図を移動して「凡例を更新」で表示範囲の凡例を取得できます
+                </p>
+                <button class="seamless-legend-refresh-btn" onclick="showMacrostratLegend()">
+                    🔄 凡例を更新
+                </button>
+            </div>
+        `;
+
+        if (Object.keys(groups).length === 0) {
+            legendHtml += `
+                <div class="legend-section">
+                    <p class="placeholder-text">この範囲にはMacrostratの地質図データがありません。</p>
+                </div>
+            `;
+        } else {
+            // 時代順にソート（古い順）
+            const sortedGroups = Object.entries(groups).sort((a, b) => {
+                const ageA = a[1][0]?.t_age || 0;
+                const ageB = b[1][0]?.t_age || 0;
+                return ageB - ageA; // 古い時代を先に
+            });
+
+            for (const [groupName, items] of sortedGroups) {
+                legendHtml += `
+                    <div class="legend-section">
+                        <div class="legend-section-title">${groupName}（${items.length}件）</div>
+                `;
+
+                items.forEach(item => {
+                    const color = item.color || '#999999';
+                    const name = item.strat_name || item.name || 'N/A';
+                    const lith = item.lith || '';
+                    const ageRange = item.t_age !== undefined && item.b_age !== undefined
+                        ? `${item.t_age.toFixed(1)} - ${item.b_age.toFixed(1)} Ma`
+                        : '';
+
+                    legendHtml += `
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: ${color};"></div>
+                            <div class="legend-text">
+                                <div class="legend-text-title">${name}</div>
+                                ${lith ? `<div class="legend-text-desc">${lith}</div>` : ''}
+                                ${ageRange ? `<div class="legend-text-desc" style="font-size: 0.7rem; color: #888;">${ageRange}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                legendHtml += '</div>';
+            }
+        }
+
+        legendHtml += `
+            <a href="https://macrostrat.org/map" target="_blank" rel="noopener noreferrer" class="legend-link">
+                🔗 Macrostrat公式マップを開く
+            </a>
+        `;
+
+        content.innerHTML = legendHtml;
+
+    } catch (error) {
+        console.error('Macrostrat凡例読み込みエラー:', error);
+        content.innerHTML = `
+            <div class="legend-error">
+                凡例の読み込みに失敗しました。
+            </div>
+            <a href="https://macrostrat.org/map" target="_blank" rel="noopener noreferrer" class="legend-link">
+                🔗 Macrostrat公式マップを開く
+            </a>
+        `;
+    }
+}
+
+/**
+ * 表示範囲内のMacrostrat凡例を取得（グリッドサンプリング）
+ */
+async function getVisibleMacrostratLegend() {
+    const map = getMap();
+    const bounds = map.getBounds();
+
+    const west = bounds.getWest();
+    const east = bounds.getEast();
+    const south = bounds.getSouth();
+    const north = bounds.getNorth();
+
+    // 範囲内を10x10グリッドでサンプリング（100ポイント）
+    const gridSize = 10;
+    const latStep = (north - south) / gridSize;
+    const lngStep = (east - west) / gridSize;
+
+    const samplePoints = [];
+    for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+            samplePoints.push({
+                lat: south + latStep * (i + 0.5),
+                lng: west + lngStep * (j + 0.5)
+            });
+        }
+    }
+
+    // 並列でAPIを呼び出し（全ポイント）
+    const results = await Promise.allSettled(
+        samplePoints.map(point => fetchMacrostratUnit(point.lat, point.lng))
+    );
+
+    // 結果を集約
+    const unitsMap = new Map();
+    results.forEach(result => {
+        if (result.status === 'fulfilled' && result.value) {
+            result.value.forEach(unit => {
+                if (unit.unit_id && !unitsMap.has(unit.unit_id)) {
+                    unitsMap.set(unit.unit_id, unit);
+                }
+            });
+        }
+    });
+
+    console.log(`Macrostrat表示範囲内の凡例: ${unitsMap.size}項目`);
+    return Array.from(unitsMap.values());
+}
+
+/**
+ * 特定の地点のMacrostrat地質情報を取得
+ */
+async function fetchMacrostratUnit(lat, lng) {
+    try {
+        const url = `${MACROSTRAT_API_URL}?lat=${lat}&lng=${lng}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = await response.json();
+        console.log('Macrostrat API response:', data);
+
+        // レスポンス形式に応じて解析
+        let mapData = null;
+
+        // 形式1: { success: { data: { mapData: [...] } } }
+        if (data.success?.data?.mapData) {
+            mapData = data.success.data.mapData;
+        }
+        // 形式2: { success: { data: [...] } }
+        else if (data.success?.data && Array.isArray(data.success.data)) {
+            mapData = data.success.data;
+        }
+        // 形式3: { data: [...] }
+        else if (data.data && Array.isArray(data.data)) {
+            mapData = data.data;
+        }
+        // 形式4: 直接配列
+        else if (Array.isArray(data)) {
+            mapData = data;
+        }
+
+        if (!mapData || mapData.length === 0) {
+            return null;
+        }
+
+        return mapData.map(item => ({
+            unit_id: item.map_id || item.unit_id || item.id || Math.random().toString(36),
+            name: item.name || item.unit_name || '',
+            strat_name: item.strat_name || item.name || item.unit_name || '',
+            age: item.age || item.interval_name || '',
+            t_age: item.t_age ?? item.top_age,
+            b_age: item.b_age ?? item.bottom_age,
+            lith: item.lith || item.lithology || '',
+            color: item.color ? (item.color.startsWith('#') ? item.color : `#${item.color}`) : '#999999'
+        }));
+    } catch (error) {
+        console.warn('Macrostrat API エラー:', error);
+        return null;
     }
 }
 
@@ -766,6 +989,8 @@ function exitLegendImageZoom() {
     // 元の凡例表示に戻る
     if (currentLegendLayerId === 'seamless') {
         showSeamlessLegend();
+    } else if (currentLegendLayerId === 'macrostrat') {
+        showMacrostratLegend();
     } else if (currentLegendLayerId && activeLayers.has(currentLegendLayerId)) {
         const layerInfo = activeLayers.get(currentLegendLayerId);
         showLegend(currentLegendLayerId, layerInfo.data);

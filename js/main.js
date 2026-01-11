@@ -8,9 +8,10 @@
 
 import { initMap } from './mapCore.js';
 import { searchGeologicalMaps } from './search.js';
-import { toggleSeamlessLayer, updateSeamlessOpacity, toggleMacrostratLayer, updateMacrostratOpacity, changeMacrostratScale } from './layers.js';
+import { toggleSeamlessLayer, updateSeamlessOpacity, toggleMacrostratLayer, updateMacrostratOpacity } from './layers.js';
 import {
     showSeamlessLegend,
+    showMacrostratLegend,
     closeLegendSidebar,
     openLegendSidebar,
     initLegendSidebarResize,
@@ -70,10 +71,16 @@ function initEventListeners() {
         macrostratOpacity.addEventListener('input', updateMacrostratOpacity);
     }
 
-    // Macrostratスケール選択
-    const macrostratScale = document.getElementById('macrostratScale');
-    if (macrostratScale) {
-        macrostratScale.addEventListener('change', changeMacrostratScale);
+    // Macrostrat凡例ボタン（デスクトップ）
+    const macrostratLegendBtn = document.getElementById('macrostratLegendBtn');
+    if (macrostratLegendBtn) {
+        macrostratLegendBtn.addEventListener('click', showMacrostratLegend);
+    }
+
+    // Macrostrat凡例ボタン（モバイル）
+    const mobileMacrostratLegendBtn = document.getElementById('mobileMacrostratLegendBtn');
+    if (mobileMacrostratLegendBtn) {
+        mobileMacrostratLegendBtn.addEventListener('click', showMacrostratLegend);
     }
 
     // 凡例サイドバー閉じるボタン
@@ -101,6 +108,7 @@ function initEventListeners() {
 // HTMLのonclickハンドラ用にグローバルに公開
 window.copyToClipboard = copyToClipboard;
 window.showSeamlessLegend = showSeamlessLegend;
+window.showMacrostratLegend = showMacrostratLegend;
 window.openLegendImageZoom = openLegendImageZoom;
 window.searchGeologicalMaps = searchGeologicalMaps;
 
