@@ -11,6 +11,10 @@ let currentLegendLayerId = null;
 let seamlessLegendData = null;
 let hoverPreviewLayer = null;
 
+// 現在地関連状態
+let locationMarker = null;
+let locationCircle = null;
+
 // 画像ビューア状態
 export const viewerState = {
     zoom: 1,
@@ -72,6 +76,14 @@ export function getHoverPreviewLayer() {
     return hoverPreviewLayer;
 }
 
+export function getLocationMarker() {
+    return locationMarker;
+}
+
+export function getLocationCircle() {
+    return locationCircle;
+}
+
 // Setters
 export function setMap(value) {
     map = value;
@@ -95,4 +107,12 @@ export function setSeamlessLegendData(value) {
 
 export function setHoverPreviewLayer(value) {
     hoverPreviewLayer = value;
+}
+
+export function setLocationMarker(value) {
+    locationMarker = value;
+}
+
+export function setLocationCircle(value) {
+    locationCircle = value;
 }

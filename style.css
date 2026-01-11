@@ -1090,6 +1090,97 @@ body {
     font-size: 0.8rem;
 }
 
+/* モバイル用現在地ボタン */
+.mobile-location-btn {
+    display: none;
+    position: fixed;
+    right: 10px;
+    bottom: calc(56px + 35vh + 16px);
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1050;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.mobile-location-btn:hover {
+    background: #f5f5f5;
+}
+
+.mobile-location-btn:active {
+    transform: scale(0.95);
+}
+
+.mobile-location-btn.loading {
+    color: #999;
+    pointer-events: none;
+}
+
+.mobile-location-btn.loading i {
+    animation: spin 1s linear infinite;
+}
+
+.mobile-location-btn.active {
+    background: #2c5f2d;
+    color: white;
+}
+
+.mobile-location-btn.error {
+    background: #ffebee;
+    color: #c62828;
+}
+
+/* 現在地マーカー */
+.location-marker {
+    position: relative;
+}
+
+.location-marker-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    background: #2c5f2d;
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 2;
+}
+
+.location-marker-pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px;
+    height: 30px;
+    background: rgba(44, 95, 45, 0.3);
+    border-radius: 50%;
+    animation: location-pulse 2s ease-out infinite;
+    z-index: 1;
+}
+
+@keyframes location-pulse {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2);
+        opacity: 0;
+    }
+}
+
 /* モバイル用ボトムナビゲーション */
 .mobile-nav {
     display: none;
@@ -1226,6 +1317,10 @@ body {
 
     .mobile-bottom-sheet {
         display: block;
+    }
+
+    .mobile-location-btn {
+        display: flex;
     }
 
     #app {
