@@ -1501,3 +1501,122 @@ body {
         padding: 6px 12px;
     }
 }
+
+/* 地質情報ポップアップスタイル */
+.geology-popup {
+    min-width: 200px;
+    max-width: 320px;
+}
+
+.geology-popup-coords {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e0e0e0;
+    font-family: monospace;
+}
+
+.geology-popup-section {
+    margin-bottom: 10px;
+}
+
+.geology-popup-section:last-child {
+    margin-bottom: 0;
+}
+
+.geology-popup-section-title {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #2c5f2d;
+    margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #2c5f2d;
+}
+
+.geology-popup-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.geology-popup-color {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    margin-top: 2px;
+}
+
+.geology-popup-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.geology-popup-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.3;
+}
+
+.geology-popup-age {
+    font-size: 0.8rem;
+    color: #555;
+    margin-top: 2px;
+}
+
+.geology-popup-detail {
+    font-size: 0.75rem;
+    color: #777;
+    margin-top: 2px;
+}
+
+.geology-popup-symbol {
+    font-size: 0.7rem;
+    color: #888;
+    margin-top: 3px;
+    font-family: monospace;
+}
+
+.geology-popup-age-range {
+    font-style: italic;
+}
+
+.geology-popup-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.geology-popup-loading .loading {
+    width: 16px;
+    height: 16px;
+}
+
+.geology-popup-error {
+    color: #d32f2f;
+    font-size: 0.85rem;
+    padding: 5px 0;
+}
+
+.geology-popup-nodata {
+    color: #888;
+    font-size: 0.85rem;
+    font-style: italic;
+    padding: 5px 0;
+}
+
+/* Leafletポップアップのカスタマイズ */
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+    margin: 12px 14px;
+}

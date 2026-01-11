@@ -21,6 +21,7 @@ import {
 } from './legend.js';
 import { copyToClipboard } from './utils.js';
 import { initMobileUI } from './mobile.js';
+import { initGeologyPopup } from './geologyPopup.js';
 
 /**
  * 初期化
@@ -29,6 +30,7 @@ function init() {
     initMap();
     initEventListeners();
     initMobileUI();
+    initGeologyPopup();
 }
 
 /**
