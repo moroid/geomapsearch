@@ -5,7 +5,7 @@
  */
 
 import { getMap } from './state.js';
-import { toggleSeamlessLayer, updateSeamlessOpacity } from './layers.js';
+import { toggleSeamlessLayer, updateSeamlessOpacity, toggleMacrostratLayer, updateMacrostratOpacity } from './layers.js';
 import { showSeamlessLegend } from './legend.js';
 
 // モバイル判定の閾値
@@ -31,6 +31,7 @@ export function initMobileUI() {
     initMobileSearchButton();
     initMobileNavigation();
     initMobileSeamlessControls();
+    initMobileMacrostratControls();
 
     // ウィンドウリサイズ時の処理
     window.addEventListener('resize', handleResize);
@@ -191,6 +192,48 @@ function initMobileSeamlessControls() {
 
     if (mobileSeamlessLegendBtn) {
         mobileSeamlessLegendBtn.addEventListener('click', showSeamlessLegend);
+    }
+}
+
+/**
+ * モバイルMacrostratコントロールの初期化
+ */
+function initMobileMacrostratControls() {
+    const mobileMacrostratToggle = document.getElementById('mobileMacrostratToggle');
+    const mobileMacrostratOpacity = document.getElementById('mobileMacrostratOpacity');
+    const mobileMacrostratControls = document.getElementById('mobileMacrostratControls');
+    const mobileMacrostratOpacityValue = document.getElementById('mobileMacrostratOpacityValue');
+
+    // デスクトップ版のコントロールと同期
+    const desktopMacrostratToggle = document.getElementById('macrostratToggle');
+    const desktopMacrostratOpacity = document.getElementById('macrostratOpacity');
+
+    if (mobileMacrostratToggle) {
+        mobileMacrostratToggle.addEventListener('change', (e) => {
+            // デスクトップ版と同期
+            if (desktopMacrostratToggle) {
+                desktopMacrostratToggle.checked = e.target.checked;
+            }
+            toggleMacrostratLayer(e);
+
+            // コントロール表示切り替え
+            if (mobileMacrostratControls) {
+                mobileMacrostratControls.style.display = e.target.checked ? 'block' : 'none';
+            }
+        });
+    }
+
+    if (mobileMacrostratOpacity) {
+        mobileMacrostratOpacity.addEventListener('input', (e) => {
+            // デスクトップ版と同期
+            if (desktopMacrostratOpacity) {
+                desktopMacrostratOpacity.value = e.target.value;
+            }
+            if (mobileMacrostratOpacityValue) {
+                mobileMacrostratOpacityValue.textContent = e.target.value;
+            }
+            updateMacrostratOpacity(e);
+        });
     }
 }
 

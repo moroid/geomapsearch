@@ -62,6 +62,24 @@
                 </div>
             </div>
 
+            <!-- 世界の地質図（Macrostrat）コントロール -->
+            <div class="control-section">
+                <h2>世界の地質図</h2>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="macrostratToggle" />
+                    Macrostrat地質図を表示
+                </label>
+                <div id="macrostratControls" style="display: none;">
+                    <div class="slider-container">
+                        <label>透明度: <span id="macrostratOpacityValue">70</span>%</label>
+                        <input type="range" id="macrostratOpacity" min="0" max="100" value="70" />
+                    </div>
+                    <p class="macrostrat-info">
+                        <a href="https://macrostrat.org/" target="_blank">Macrostrat</a> - 世界225以上の地質図を統合
+                    </p>
+                </div>
+            </div>
+
             <!-- フッター -->
             <div class="footer">
                 <p>データ提供: <a href="https://gbank.gsj.jp/geonavi/" target="_blank">産総研 地質図Navi</a></p>
@@ -112,7 +130,7 @@
                 </div>
                 <!-- シームレスパネル -->
                 <div id="mobileSeamlessPanel" class="mobile-panel">
-                    <h3>シームレス地質図</h3>
+                    <h3>シームレス地質図（日本）</h3>
                     <label class="checkbox-label">
                         <input type="checkbox" id="mobileSeamlessToggle" />
                         20万分の1シームレス地質図を表示
@@ -125,6 +143,21 @@
                         <button id="mobileSeamlessLegendBtn" class="seamless-legend-btn">
                             📋 凡例を表示
                         </button>
+                    </div>
+
+                    <h3 style="margin-top: 16px;">世界の地質図</h3>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="mobileMacrostratToggle" />
+                        Macrostrat地質図を表示
+                    </label>
+                    <div id="mobileMacrostratControls" style="display: none;">
+                        <div class="slider-container">
+                            <label>透明度: <span id="mobileMacrostratOpacityValue">70</span>%</label>
+                            <input type="range" id="mobileMacrostratOpacity" min="0" max="100" value="70" />
+                        </div>
+                        <p class="macrostrat-info">
+                            <a href="https://macrostrat.org/" target="_blank">Macrostrat</a> - 世界225以上の地質図を統合
+                        </p>
                     </div>
                 </div>
             </div>

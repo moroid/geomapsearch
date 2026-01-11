@@ -423,6 +423,23 @@ body {
     border-color: #81c784;
 }
 
+/* Macrostrat情報テキスト */
+.macrostrat-info {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.macrostrat-info a {
+    color: #2c5f2d;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.macrostrat-info a:hover {
+    text-decoration: underline;
+}
+
 /* フッター */
 .footer {
     margin-top: auto;

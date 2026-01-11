@@ -5,6 +5,7 @@
 // 地図関連状態
 let map = null;
 let seamlessLayer = null;
+let macrostratLayer = null;
 let activeLayers = new Map(); // layerId -> { layer, data, legendData }
 let searchResults = [];
 let currentLegendLayerId = null;
@@ -52,6 +53,10 @@ export function getSeamlessLayer() {
     return seamlessLayer;
 }
 
+export function getMacrostratLayer() {
+    return macrostratLayer;
+}
+
 export function getActiveLayers() {
     return activeLayers;
 }
@@ -79,6 +84,10 @@ export function setMap(value) {
 
 export function setSeamlessLayer(value) {
     seamlessLayer = value;
+}
+
+export function setMacrostratLayer(value) {
+    macrostratLayer = value;
 }
 
 export function setSearchResults(value) {

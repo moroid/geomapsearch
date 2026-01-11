@@ -2,12 +2,14 @@
  * レイヤー管理モジュール
  */
 
-import { SEAMLESS_TILE_URL } from './config.js';
+import { SEAMLESS_TILE_URL, MACROSTRAT_TILE_URL } from './config.js';
 import {
     getMap,
     getActiveLayers,
     getSeamlessLayer,
     setSeamlessLayer,
+    getMacrostratLayer,
+    setMacrostratLayer,
     getCurrentLegendLayerId
 } from './state.js';
 import { showLegend, closeLegendSidebar } from './legend.js';
@@ -424,5 +426,76 @@ export function updateSeamlessOpacity(e) {
     const seamlessLayer = getSeamlessLayer();
     if (seamlessLayer) {
         seamlessLayer.setOpacity(opacity);
+    }
+}
+
+/**
+ * Macrostrat（世界の地質図）の表示/非表示を切り替え
+ */
+export function toggleMacrostratLayer(e) {
+    const map = getMap();
+    const macrostratControls = document.getElementById('macrostratControls');
+    const mobileMacrostratControls = document.getElementById('mobileMacrostratControls');
+
+    if (e.target.checked) {
+        const macrostratLayer = L.tileLayer(MACROSTRAT_TILE_URL, {
+            minZoom: 0,
+            maxZoom: 18,
+            maxNativeZoom: 13,
+            opacity: 0.7,
+            attribution: '<a href="https://macrostrat.org/">Macrostrat</a> (CC BY 4.0)',
+            pane: 'geologicalOverlay'
+        });
+        macrostratLayer.addTo(map);
+        setMacrostratLayer(macrostratLayer);
+        if (macrostratControls) macrostratControls.style.display = 'block';
+        if (mobileMacrostratControls) mobileMacrostratControls.style.display = 'block';
+
+        // 両方のチェックボックスを同期
+        syncMacrostratToggle(true);
+    } else {
+        const macrostratLayer = getMacrostratLayer();
+        if (macrostratLayer) {
+            map.removeLayer(macrostratLayer);
+            setMacrostratLayer(null);
+        }
+        if (macrostratControls) macrostratControls.style.display = 'none';
+        if (mobileMacrostratControls) mobileMacrostratControls.style.display = 'none';
+
+        // 両方のチェックボックスを同期
+        syncMacrostratToggle(false);
+    }
+}
+
+/**
+ * Macrostratトグルの同期
+ */
+function syncMacrostratToggle(checked) {
+    const desktopToggle = document.getElementById('macrostratToggle');
+    const mobileToggle = document.getElementById('mobileMacrostratToggle');
+    if (desktopToggle) desktopToggle.checked = checked;
+    if (mobileToggle) mobileToggle.checked = checked;
+}
+
+/**
+ * Macrostrat（世界の地質図）の透明度を更新
+ */
+export function updateMacrostratOpacity(e) {
+    const opacity = e.target.value / 100;
+
+    // デスクトップとモバイル両方の値を更新
+    const desktopValue = document.getElementById('macrostratOpacityValue');
+    const mobileValue = document.getElementById('mobileMacrostratOpacityValue');
+    const desktopSlider = document.getElementById('macrostratOpacity');
+    const mobileSlider = document.getElementById('mobileMacrostratOpacity');
+
+    if (desktopValue) desktopValue.textContent = e.target.value;
+    if (mobileValue) mobileValue.textContent = e.target.value;
+    if (desktopSlider && desktopSlider !== e.target) desktopSlider.value = e.target.value;
+    if (mobileSlider && mobileSlider !== e.target) mobileSlider.value = e.target.value;
+
+    const macrostratLayer = getMacrostratLayer();
+    if (macrostratLayer) {
+        macrostratLayer.setOpacity(opacity);
     }
 }
