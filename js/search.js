@@ -9,6 +9,31 @@ import { toggleMapLayer } from './layers.js';
 import { showBoundsPreview, hideBoundsPreview } from './mapCore.js';
 import { updateMobileSearchResults, isMobile } from './mobile.js';
 
+// ========================================
+// キャッシュ機能（検索高速化）
+// ========================================
+let cachedRawData = null;        // APIから取得した生データ
+let cacheTimestamp = null;       // キャッシュ作成時刻
+const CACHE_DURATION = 10 * 60 * 1000; // キャッシュ有効期間: 10分
+
+/**
+ * キャッシュが有効かチェック
+ */
+function isCacheValid() {
+    return cachedRawData !== null &&
+           cacheTimestamp !== null &&
+           (Date.now() - cacheTimestamp) < CACHE_DURATION;
+}
+
+/**
+ * キャッシュをクリア（必要に応じて外部から呼び出し可能）
+ */
+export function clearSearchCache() {
+    cachedRawData = null;
+    cacheTimestamp = null;
+    console.log('検索キャッシュをクリアしました');
+}
+
 /**
  * 2点間の距離を計算（簡易版、度単位）
  */
@@ -131,9 +156,17 @@ export async function searchGeologicalMaps() {
 }
 
 /**
- * CKAN APIから地質図データを取得
+ * CKAN APIから地質図データを取得（キャッシュ対応）
  */
 async function fetchGeologicalMaps(bbox) {
+    // キャッシュが有効な場合はAPIリクエストをスキップ
+    if (isCacheValid()) {
+        console.log('キャッシュからデータを取得（APIリクエストなし）');
+        return filterMapsByBounds(cachedRawData, bbox);
+    }
+
+    // キャッシュが無い場合のみAPIリクエスト
+    console.log('APIからデータを取得中...');
     const url = `${CKAN_API_BASE}/package_search?q=地質図&rows=1000`;
 
     const response = await fetch(url);
@@ -146,9 +179,25 @@ async function fetchGeologicalMaps(bbox) {
         throw new Error('APIがエラーを返しました');
     }
 
+    // 全データを処理してキャッシュに保存
+    const allMapsWithTiles = processApiResults(data.result.results);
+
+    // キャッシュを更新
+    cachedRawData = allMapsWithTiles;
+    cacheTimestamp = Date.now();
+    console.log(`キャッシュを更新: ${allMapsWithTiles.length}件の地質図データ`);
+
+    // 現在のbboxでフィルタリングして返す
+    return filterMapsByBounds(allMapsWithTiles, bbox);
+}
+
+/**
+ * APIレスポンスを処理して地質図データを抽出
+ */
+function processApiResults(results) {
     const mapsWithTiles = [];
 
-    for (const dataset of data.result.results) {
+    for (const dataset of results) {
         const tileResource = dataset.resources?.find(r =>
             r.format === 'XYZ' ||
             r.name?.includes('タイル') ||
@@ -202,7 +251,7 @@ async function fetchGeologicalMaps(bbox) {
                 }
             }
 
-            if (mapBounds && boundsIntersect(bbox, mapBounds)) {
+            if (mapBounds) {
                 const imageResource = dataset.resources?.find(r =>
                     r.format === 'JPEG' || r.format === 'JPG' || r.format === 'PNG'
                 );
@@ -226,6 +275,13 @@ async function fetchGeologicalMaps(bbox) {
     }
 
     return mapsWithTiles;
+}
+
+/**
+ * キャッシュされた地質図データをbboxでフィルタリング
+ */
+function filterMapsByBounds(maps, bbox) {
+    return maps.filter(map => boundsIntersect(bbox, map.bounds));
 }
 
 /**
