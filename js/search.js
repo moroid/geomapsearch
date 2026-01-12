@@ -134,7 +134,7 @@ export async function searchGeologicalMaps() {
  * CKAN APIから地質図データを取得
  */
 async function fetchGeologicalMaps(bbox) {
-    const url = `${CKAN_API_BASE}/package_search?q=地質図&rows=500`;
+    const url = `${CKAN_API_BASE}/package_search?q=地質図&rows=1000`;
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -144,6 +144,23 @@ async function fetchGeologicalMaps(bbox) {
     const data = await response.json();
     if (!data.success) {
         throw new Error('APIがエラーを返しました');
+    }
+
+    // デバッグ: API結果の総件数を確認
+    console.log(`CKAN検索結果: ${data.result.count}件中 ${data.result.results.length}件を取得`);
+
+    // デバッグ: 東京西南部を検索
+    const tokyoSW = data.result.results.find(d => d.title?.includes('東京西南部'));
+    if (tokyoSW) {
+        console.log('=== 東京西南部 デバッグ情報 ===');
+        console.log('タイトル:', tokyoSW.title);
+        console.log('リソース一覧:');
+        tokyoSW.resources?.forEach(r => {
+            console.log(`  - ${r.name} (format: ${r.format}, url: ${r.url?.substring(0, 80)}...)`);
+        });
+        console.log('spatial:', tokyoSW.spatial);
+    } else {
+        console.log('東京西南部: CKAN検索結果に含まれていません（rows=500の制限を超えた可能性）');
     }
 
     const mapsWithTiles = [];
@@ -164,6 +181,11 @@ async function fetchGeologicalMaps(bbox) {
             r.format === 'JSON' &&
             r.url?.includes('/ld/resource/')
         );
+
+        // デバッグ: 東京西南部がタイルリソース判定で除外されていないか確認
+        if (dataset.title?.includes('東京西南部')) {
+            console.log('東京西南部 - タイルリソース:', !!tileResource, ', TileJSON:', !!tileJsonResource);
+        }
 
         if (tileResource || tileJsonResource) {
             let mapBounds = null;
