@@ -134,7 +134,7 @@ export async function searchGeologicalMaps() {
  * CKAN APIから地質図データを取得
  */
 async function fetchGeologicalMaps(bbox) {
-    const url = `${CKAN_API_BASE}/package_search?q=地質図&rows=500`;
+    const url = `${CKAN_API_BASE}/package_search?q=地質図&rows=1000`;
 
     const response = await fetch(url);
     if (!response.ok) {
