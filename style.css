@@ -1674,3 +1674,8 @@ body {
     color: #2c5f2d;
     font-weight: 500;
 }
+
+/* 帰属表示を非表示 */
+.maplibregl-ctrl-attrib {
+    display: none !important;
+}
