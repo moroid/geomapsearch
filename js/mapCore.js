@@ -70,7 +70,7 @@ export function initMap() {
         },
         center: [138.0, 36.0],
         zoom: 5,
-        attributionControl: true,
+        attributionControl: false,
         doubleClickZoom: false
     });
 
