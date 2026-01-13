@@ -1,5 +1,5 @@
 /**
- * 検索機能モジュール
+ * 検索機能モジュール（MapLibre GL JS 5対応）
  */
 
 import { CKAN_API_BASE } from './config.js';

@@ -1,10 +1,13 @@
 /**
- * 地質情報ポップアップモジュール
+ * 地質情報ポップアップモジュール（MapLibre GL JS 5）
  * 地図クリック時に地質情報を取得してポップアップで表示
  */
 
 import { SEAMLESS_LEGEND_URL, MACROSTRAT_API_URL } from './config.js';
 import { getMap, getSeamlessLayer, getMacrostratLayer } from './state.js';
+
+// 現在表示中のポップアップ
+let currentPopup = null;
 
 /**
  * 地質情報ポップアップ機能を初期化
@@ -13,8 +16,14 @@ export function initGeologyPopup() {
     const map = getMap();
     if (!map) return;
 
-    // 地図クリック時のイベントハンドラ
-    map.on('click', handleMapClick);
+    // 地図の読み込みが完了してからイベントハンドラを設定
+    if (map.isStyleLoaded()) {
+        map.on('click', handleMapClick);
+    } else {
+        map.on('load', () => {
+            map.on('click', handleMapClick);
+        });
+    }
 }
 
 /**
@@ -30,14 +39,22 @@ async function handleMapClick(e) {
         return;
     }
 
-    const lat = e.latlng.lat;
-    const lng = e.latlng.lng;
+    const lat = e.lngLat.lat;
+    const lng = e.lngLat.lng;
+
+    // 既存のポップアップを閉じる
+    if (currentPopup) {
+        currentPopup.remove();
+    }
 
     // ローディングポップアップを表示
-    const popup = L.popup()
-        .setLatLng(e.latlng)
-        .setContent('<div class="geology-popup-loading"><span class="loading"></span> 地質情報を取得中...</div>')
-        .openOn(map);
+    currentPopup = new maplibregl.Popup({
+        closeOnClick: true,
+        maxWidth: '320px'
+    })
+        .setLngLat([lng, lat])
+        .setHTML('<div class="geology-popup-loading"><span class="loading"></span> 地質情報を取得中...</div>')
+        .addTo(map);
 
     try {
         // 並行してAPIを呼び出し
@@ -73,11 +90,17 @@ async function handleMapClick(e) {
 
         // ポップアップの内容を生成
         const content = generatePopupContent(lat, lng, seamlessData, macrostratData);
-        popup.setContent(content);
+
+        // ポップアップがまだ存在するか確認
+        if (currentPopup) {
+            currentPopup.setHTML(content);
+        }
 
     } catch (error) {
         console.error('地質情報取得エラー:', error);
-        popup.setContent('<div class="geology-popup-error">地質情報の取得に失敗しました</div>');
+        if (currentPopup) {
+            currentPopup.setHTML('<div class="geology-popup-error">地質情報の取得に失敗しました</div>');
+        }
     }
 }
 
