@@ -1,5 +1,5 @@
 /**
- * 凡例表示モジュール
+ * 凡例表示モジュール（MapLibre GL JS 5対応）
  */
 
 import { SEAMLESS_LEGEND_URL, MACROSTRAT_API_URL } from './config.js';

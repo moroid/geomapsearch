@@ -1,5 +1,5 @@
 /**
- * レイヤー管理モジュール
+ * レイヤー管理モジュール（MapLibre GL JS 5）
  */
 
 import { SEAMLESS_TILE_URL, MACROSTRAT_TILE_URL } from './config.js';
@@ -14,6 +14,9 @@ import {
 } from './state.js';
 import { showLegend, closeLegendSidebar } from './legend.js';
 import { updateMobileLayersList } from './mobile.js';
+
+// レイヤーカウンター（ユニークID生成用）
+let layerCounter = 0;
 
 /**
  * 地質図レイヤーの表示/非表示を切り替え
@@ -36,6 +39,12 @@ export async function toggleMapLayer(mapData) {
 export async function addLayer(mapData) {
     const map = getMap();
     const activeLayers = getActiveLayers();
+
+    // 地図が読み込まれているか確認
+    if (!map || !map.isStyleLoaded()) {
+        console.warn('地図がまだ読み込まれていません');
+        return;
+    }
 
     try {
         let tileUrl = mapData.tileUrl;
@@ -112,23 +121,35 @@ export async function addLayer(mapData) {
             return;
         }
 
-        const layer = L.tileLayer(tileUrl, {
-            minZoom: minZoom,
-            maxZoom: 18,
-            maxNativeZoom: maxZoom,
-            opacity: 0.7,
-            bounds: bounds ? L.latLngBounds(
-                [bounds.south, bounds.west],
-                [bounds.north, bounds.east]
-            ) : undefined,
-            attribution: '<a href="https://gbank.gsj.jp/geonavi/">産総研 地質図Navi</a>',
-            pane: 'geologicalOverlay'
+        // ユニークなソースIDとレイヤーIDを生成
+        const sourceId = `geology-source-${mapData.id}`;
+        const layerId = `geology-layer-${mapData.id}`;
+
+        // ソースを追加
+        map.addSource(sourceId, {
+            type: 'raster',
+            tiles: [tileUrl],
+            tileSize: 256,
+            minzoom: minZoom,
+            maxzoom: maxZoom,
+            bounds: bounds ? [bounds.west, bounds.south, bounds.east, bounds.north] : undefined,
+            attribution: '<a href="https://gbank.gsj.jp/geonavi/">産総研 地質図Navi</a>'
         });
 
-        layer.addTo(map);
+        // レイヤーを追加（プレビューレイヤーの下に配置）
+        map.addLayer({
+            id: layerId,
+            type: 'raster',
+            source: sourceId,
+            paint: {
+                'raster-opacity': 0.7
+            }
+        }, 'bounds-preview-fill');
 
         activeLayers.set(mapData.id, {
-            layer: layer,
+            sourceId: sourceId,
+            layerId: layerId,
+            opacity: 0.7,
             data: {
                 ...mapData,
                 bounds,
@@ -159,7 +180,13 @@ export function removeLayer(layerId) {
 
     const layerInfo = activeLayers.get(layerId);
     if (layerInfo) {
-        map.removeLayer(layerInfo.layer);
+        // MapLibreのレイヤーとソースを削除
+        if (map.getLayer(layerInfo.layerId)) {
+            map.removeLayer(layerInfo.layerId);
+        }
+        if (map.getSource(layerInfo.sourceId)) {
+            map.removeSource(layerInfo.sourceId);
+        }
         activeLayers.delete(layerId);
         updateActiveLayersList();
     }
@@ -217,9 +244,9 @@ export function updateActiveLayersList() {
             const bounds = layerInfo.data.bounds;
             if (bounds) {
                 map.fitBounds([
-                    [bounds.south, bounds.west],
-                    [bounds.north, bounds.east]
-                ]);
+                    [bounds.west, bounds.south],
+                    [bounds.east, bounds.north]
+                ], { padding: 50 });
             }
         });
 
@@ -232,12 +259,13 @@ export function updateActiveLayersList() {
         // 透明度スライダー
         const slider = item.querySelector('input[type="range"]');
         const valueSpan = item.querySelector('.opacity-value');
-        slider.value = layerInfo.layer.options.opacity * 100;
+        slider.value = layerInfo.opacity * 100;
         valueSpan.textContent = `${Math.round(slider.value)}%`;
 
         slider.addEventListener('input', (e) => {
             const opacity = e.target.value / 100;
-            layerInfo.layer.setOpacity(opacity);
+            layerInfo.opacity = opacity;
+            map.setPaintProperty(layerInfo.layerId, 'raster-opacity', opacity);
             valueSpan.textContent = `${e.target.value}%`;
         });
 
@@ -279,9 +307,9 @@ function updateMobileActiveLayersList() {
                 </div>
                 <div class="layer-item-opacity">
                     <span>透明度:</span>
-                    <input type="range" min="0" max="100" value="${Math.round(layerInfo.layer.options.opacity * 100)}"
+                    <input type="range" min="0" max="100" value="${Math.round(layerInfo.opacity * 100)}"
                            oninput="window.setMobileLayerOpacity('${layerId}', this.value, this)" />
-                    <span class="opacity-value">${Math.round(layerInfo.layer.options.opacity * 100)}%</span>
+                    <span class="opacity-value">${Math.round(layerInfo.opacity * 100)}%</span>
                 </div>
             </div>
         `;
@@ -306,9 +334,9 @@ window.zoomToMobileLayer = function(layerId) {
     if (layerInfo && layerInfo.data.bounds) {
         const bounds = layerInfo.data.bounds;
         map.fitBounds([
-            [bounds.south, bounds.west],
-            [bounds.north, bounds.east]
-        ]);
+            [bounds.west, bounds.south],
+            [bounds.east, bounds.north]
+        ], { padding: 50 });
     }
 };
 
@@ -318,10 +346,13 @@ window.removeMobileLayer = function(layerId) {
 };
 
 window.setMobileLayerOpacity = function(layerId, value, inputElement) {
+    const map = getMap();
     const activeLayers = getActiveLayers();
     const layerInfo = activeLayers.get(layerId);
     if (layerInfo) {
-        layerInfo.layer.setOpacity(value / 100);
+        const opacity = value / 100;
+        layerInfo.opacity = opacity;
+        map.setPaintProperty(layerInfo.layerId, 'raster-opacity', opacity);
         // 透明度値の表示を更新
         if (inputElement) {
             const valueSpan = inputElement.parentElement.querySelector('.opacity-value');
@@ -391,24 +422,47 @@ export function toggleSeamlessLayer(e) {
     const seamlessControls = document.getElementById('seamlessControls');
     const currentLegendLayerId = getCurrentLegendLayerId();
 
+    if (!map || !map.isStyleLoaded()) {
+        console.warn('地図がまだ読み込まれていません');
+        e.target.checked = false;
+        return;
+    }
+
     if (e.target.checked) {
-        const seamlessLayer = L.tileLayer(SEAMLESS_TILE_URL, {
-            minZoom: 0,
-            maxZoom: 18,
-            maxNativeZoom: 13,
-            opacity: 0.7,
-            attribution: '<a href="https://gbank.gsj.jp/seamless/">20万分の1日本シームレス地質図</a>',
-            pane: 'geologicalOverlay'
-        });
-        seamlessLayer.addTo(map);
-        setSeamlessLayer(seamlessLayer);
+        // ソースを追加
+        if (!map.getSource('seamless-source')) {
+            map.addSource('seamless-source', {
+                type: 'raster',
+                tiles: [SEAMLESS_TILE_URL],
+                tileSize: 256,
+                minzoom: 0,
+                maxzoom: 13,
+                attribution: '<a href="https://gbank.gsj.jp/seamless/">20万分の1日本シームレス地質図</a>'
+            });
+        }
+
+        // レイヤーを追加
+        if (!map.getLayer('seamless-layer')) {
+            map.addLayer({
+                id: 'seamless-layer',
+                type: 'raster',
+                source: 'seamless-source',
+                paint: {
+                    'raster-opacity': 0.7
+                }
+            }, 'bounds-preview-fill');
+        }
+
+        setSeamlessLayer('seamless-layer');
         seamlessControls.style.display = 'block';
     } else {
-        const seamlessLayer = getSeamlessLayer();
-        if (seamlessLayer) {
-            map.removeLayer(seamlessLayer);
-            setSeamlessLayer(null);
+        if (map.getLayer('seamless-layer')) {
+            map.removeLayer('seamless-layer');
         }
+        if (map.getSource('seamless-source')) {
+            map.removeSource('seamless-source');
+        }
+        setSeamlessLayer(null);
         seamlessControls.style.display = 'none';
         if (currentLegendLayerId === 'seamless') {
             closeLegendSidebar();
@@ -420,12 +474,12 @@ export function toggleSeamlessLayer(e) {
  * シームレス地質図の透明度を更新
  */
 export function updateSeamlessOpacity(e) {
+    const map = getMap();
     const opacity = e.target.value / 100;
     document.getElementById('seamlessOpacityValue').textContent = e.target.value;
 
-    const seamlessLayer = getSeamlessLayer();
-    if (seamlessLayer) {
-        seamlessLayer.setOpacity(opacity);
+    if (map && map.getLayer('seamless-layer')) {
+        map.setPaintProperty('seamless-layer', 'raster-opacity', opacity);
     }
 }
 
@@ -438,28 +492,51 @@ export function toggleMacrostratLayer(e) {
     const mobileMacrostratControls = document.getElementById('mobileMacrostratControls');
     const currentLegendLayerId = getCurrentLegendLayerId();
 
+    if (!map || !map.isStyleLoaded()) {
+        console.warn('地図がまだ読み込まれていません');
+        e.target.checked = false;
+        return;
+    }
+
     if (e.target.checked) {
-        const macrostratLayer = L.tileLayer(MACROSTRAT_TILE_URL, {
-            minZoom: 0,
-            maxZoom: 18,
-            maxNativeZoom: 13,
-            opacity: 0.7,
-            attribution: '<a href="https://macrostrat.org/">Macrostrat</a> (CC BY 4.0)',
-            pane: 'geologicalOverlay'
-        });
-        macrostratLayer.addTo(map);
-        setMacrostratLayer(macrostratLayer);
+        // ソースを追加
+        if (!map.getSource('macrostrat-source')) {
+            map.addSource('macrostrat-source', {
+                type: 'raster',
+                tiles: [MACROSTRAT_TILE_URL],
+                tileSize: 256,
+                minzoom: 0,
+                maxzoom: 13,
+                attribution: '<a href="https://macrostrat.org/">Macrostrat</a> (CC BY 4.0)'
+            });
+        }
+
+        // レイヤーを追加
+        if (!map.getLayer('macrostrat-layer')) {
+            map.addLayer({
+                id: 'macrostrat-layer',
+                type: 'raster',
+                source: 'macrostrat-source',
+                paint: {
+                    'raster-opacity': 0.7
+                }
+            }, 'bounds-preview-fill');
+        }
+
+        setMacrostratLayer('macrostrat-layer');
         if (macrostratControls) macrostratControls.style.display = 'block';
         if (mobileMacrostratControls) mobileMacrostratControls.style.display = 'block';
 
         // 両方のチェックボックスを同期
         syncMacrostratToggle(true);
     } else {
-        const macrostratLayer = getMacrostratLayer();
-        if (macrostratLayer) {
-            map.removeLayer(macrostratLayer);
-            setMacrostratLayer(null);
+        if (map.getLayer('macrostrat-layer')) {
+            map.removeLayer('macrostrat-layer');
         }
+        if (map.getSource('macrostrat-source')) {
+            map.removeSource('macrostrat-source');
+        }
+        setMacrostratLayer(null);
         if (macrostratControls) macrostratControls.style.display = 'none';
         if (mobileMacrostratControls) mobileMacrostratControls.style.display = 'none';
         if (currentLegendLayerId === 'macrostrat') {
@@ -485,6 +562,7 @@ function syncMacrostratToggle(checked) {
  * Macrostrat（世界の地質図）の透明度を更新
  */
 export function updateMacrostratOpacity(e) {
+    const map = getMap();
     const opacity = e.target.value / 100;
 
     // デスクトップとモバイル両方の値を更新
@@ -498,8 +576,7 @@ export function updateMacrostratOpacity(e) {
     if (desktopSlider && desktopSlider !== e.target) desktopSlider.value = e.target.value;
     if (mobileSlider && mobileSlider !== e.target) mobileSlider.value = e.target.value;
 
-    const macrostratLayer = getMacrostratLayer();
-    if (macrostratLayer) {
-        macrostratLayer.setOpacity(opacity);
+    if (map && map.getLayer('macrostrat-layer')) {
+        map.setPaintProperty('macrostrat-layer', 'raster-opacity', opacity);
     }
 }

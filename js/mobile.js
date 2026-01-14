@@ -1,5 +1,5 @@
 /**
- * モバイルUI管理モジュール
+ * モバイルUI管理モジュール（MapLibre GL JS 5）
  *
  * スマートフォン向けのUI操作を管理する
  */
@@ -48,7 +48,7 @@ export function initMobileUI() {
         setTimeout(() => {
             const map = getMap();
             if (map) {
-                map.invalidateSize();
+                map.resize();
             }
         }, 100);
     }
@@ -60,7 +60,7 @@ export function initMobileUI() {
 function handleResize() {
     const map = getMap();
     if (map) {
-        map.invalidateSize();
+        map.resize();
     }
 }
 
@@ -360,29 +360,85 @@ function showUserLocation(lat, lng, accuracy) {
     // 既存のマーカーと円を削除
     clearLocationMarkers();
 
-    // 精度範囲の円を追加
-    const circle = L.circle([lat, lng], {
-        radius: accuracy,
-        color: '#2c5f2d',
-        fillColor: '#2c5f2d',
-        fillOpacity: 0.15,
-        weight: 2
-    }).addTo(map);
-    setLocationCircle(circle);
+    // 精度範囲の円を追加（GeoJSONソースとレイヤー）
+    const circleSourceId = 'location-accuracy-source';
+    const circleFillLayerId = 'location-accuracy-fill';
+    const circleLineLayerId = 'location-accuracy-line';
 
-    // 現在地マーカーを追加（カスタムアイコン）
-    const locationIcon = L.divIcon({
-        className: 'location-marker',
-        html: '<div class="location-marker-dot"></div><div class="location-marker-pulse"></div>',
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
+    // 円を近似するポリゴンを作成
+    const circleGeoJSON = createCircleGeoJSON(lng, lat, accuracy);
+
+    map.addSource(circleSourceId, {
+        type: 'geojson',
+        data: circleGeoJSON
     });
 
-    const marker = L.marker([lat, lng], { icon: locationIcon }).addTo(map);
+    map.addLayer({
+        id: circleFillLayerId,
+        type: 'fill',
+        source: circleSourceId,
+        paint: {
+            'fill-color': '#2c5f2d',
+            'fill-opacity': 0.15
+        }
+    });
+
+    map.addLayer({
+        id: circleLineLayerId,
+        type: 'line',
+        source: circleSourceId,
+        paint: {
+            'line-color': '#2c5f2d',
+            'line-width': 2
+        }
+    });
+
+    setLocationCircle({ sourceId: circleSourceId, fillLayerId: circleFillLayerId, lineLayerId: circleLineLayerId });
+
+    // 現在地マーカーを追加（カスタムDOM要素）
+    const markerEl = document.createElement('div');
+    markerEl.className = 'location-marker';
+    markerEl.innerHTML = '<div class="location-marker-dot"></div><div class="location-marker-pulse"></div>';
+
+    const marker = new maplibregl.Marker({ element: markerEl })
+        .setLngLat([lng, lat])
+        .addTo(map);
+
     setLocationMarker(marker);
 
     // 地図を現在地に移動
-    map.setView([lat, lng], 14);
+    map.flyTo({
+        center: [lng, lat],
+        zoom: 14
+    });
+}
+
+/**
+ * 円を近似するGeoJSONポリゴンを作成
+ */
+function createCircleGeoJSON(lng, lat, radiusMeters) {
+    const points = 64;
+    const coordinates = [];
+
+    // 緯度1度あたりのメートル数（約111km）
+    const latPerMeter = 1 / 111320;
+    // 経度1度あたりのメートル数（緯度によって変わる）
+    const lngPerMeter = 1 / (111320 * Math.cos(lat * Math.PI / 180));
+
+    for (let i = 0; i <= points; i++) {
+        const angle = (i / points) * 2 * Math.PI;
+        const dx = radiusMeters * Math.cos(angle) * lngPerMeter;
+        const dy = radiusMeters * Math.sin(angle) * latPerMeter;
+        coordinates.push([lng + dx, lat + dy]);
+    }
+
+    return {
+        type: 'Feature',
+        geometry: {
+            type: 'Polygon',
+            coordinates: [coordinates]
+        }
+    };
 }
 
 /**
@@ -394,11 +450,21 @@ function clearLocationMarkers() {
     const circle = getLocationCircle();
 
     if (marker) {
-        map.removeLayer(marker);
+        marker.remove();
         setLocationMarker(null);
     }
+
     if (circle) {
-        map.removeLayer(circle);
+        // MapLibreのレイヤーとソースを削除
+        if (map.getLayer(circle.fillLayerId)) {
+            map.removeLayer(circle.fillLayerId);
+        }
+        if (map.getLayer(circle.lineLayerId)) {
+            map.removeLayer(circle.lineLayerId);
+        }
+        if (map.getSource(circle.sourceId)) {
+            map.removeSource(circle.sourceId);
+        }
         setLocationCircle(null);
     }
 }
